@@ -1,21 +1,28 @@
-app.get('/api/public/treatments', async (req, res) => {
-  const { subdomain } = req.query;
-  if (typeof subdomain !== 'string' || !subdomain) {
-    return res.status(400).json({ error: 'El parámetro subdomain es obligatorio.' });
-  }
+export default async function Home() {
+  const res = await fetch('https://api-dental-obx9.onrender.com/api/treatments');
+  const treatments = await res.json();
 
-  try {
-    const result = await db.query(
-      `SELECT tr.id, tr.name, tr.duration_minutes, tr.price, t.currency
-       FROM treatments tr
-       JOIN tenants t ON t.id = tr.tenant_id
-       WHERE t.subdomain = $1 AND t.is_active = TRUE
-       ORDER BY tr.name`,
-      [subdomain]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error al obtener tratamientos públicos:', error);
-    res.status(500).json({ error: 'Error al obtener los tratamientos' });
-  }
-});
+  return (
+    <main className="min-h-screen p-8 bg-gray-50 text-gray-900">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-blue-600 mb-8">
+          Clínica Odontológica Modelo
+        </h1>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {treatments.map((treatment: any, index: number) => (
+            <div key={index} className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+              <h2 className="text-xl font-semibold mb-2">{treatment.name}</h2>
+              <div className="text-gray-600 space-y-1">
+                <p>⏱️ {treatment.duration_minutes} minutos</p>
+                <p className="font-medium text-green-600 text-lg">
+                  ${treatment.price}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
+  );
+}
