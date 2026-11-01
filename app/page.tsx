@@ -9,7 +9,7 @@ export default async function Home() {
     <main className="min-h-screen p-8 bg-gray-50 text-gray-900">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-blue-600 mb-8">
-          Clínica Odontológica Modelo
+          Clínica Odontológica MeDent
         </h1>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
