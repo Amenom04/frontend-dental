@@ -1,6 +1,8 @@
+export const instant = false;
+
 export default async function Home() {
-  // Conexión con tu API backend
-  const res = await fetch('[https://api-dental-obx9.onrender.com/api/treatments](https://api-dental-obx9.onrender.com/api/treatments)');
+  // URL limpia y corregida
+  const res = await fetch('https://api-dental-obx9.onrender.com/api/treatments');
   const treatments = await res.json();
 
   return (
