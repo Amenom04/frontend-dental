@@ -1,16 +1,14 @@
-export const dynamic = "force-dynamic";
-export default async function Home() {
+export default async function Home()
   // Conectamos el frontend con tu API en Render
-  const res = await fetch('https://api-dental-obx9.onrender.com/api/treatments', { 
-    cache: 'no-store' 
-  });
+  const res = await fetch('https://api-dental-obx9.onrender.com/api/treatments');
+
   const treatments = await res.json();
 
   return (
     <main className="min-h-screen p-8 bg-gray-50 text-gray-900">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-blue-600 mb-8">
-          Clínica Odontológica Modelo
+          Clínica Odontológica MeDent
         </h1>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
