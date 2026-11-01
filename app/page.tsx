@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic';
-
 export default async function Home() {
   // Volvemos a agregar la conexión con tu API backend
   const res = await fetch('https://api-dental-obx9.onrender.com/api/treatments');
