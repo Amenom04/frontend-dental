@@ -1,8 +1,7 @@
 export default async function Home() {
   // Volvemos a agregar la conexión con tu API backend
-  const res = await fetch('https://api-dental-obx9.onrender.com/api/treatments');
+  const res = await fetch('[https://api-dental-obx9.onrender.com/api/treatments](https://api-dental-obx9.onrender.com/api/treatments)', { cache: 'no-store' });
   const treatments = await res.json();
-
   return (
     <main className="min-h-screen p-8 bg-gray-50 text-gray-900">
       <div className="max-w-4xl mx-auto">
