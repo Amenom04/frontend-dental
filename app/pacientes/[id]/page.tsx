@@ -34,10 +34,12 @@ function ContenidoPaciente({ params }: Props) {
   const { id } = use(params);
   const router = useRouter();
 
+  // Prevención de Hydration Mismatch
+  const [mounted, setMounted] = useState(false);
+
   // Estados del sistema y paciente
   const [rolActivo, setRolActivo] = useState<RolStaff>('Administrador');
   const [paciente, setPaciente] = useState<PacienteData | null>(null);
-  const [cargando, setCargando] = useState(true);
 
   // Estados Odontograma
   const [modoDientes, setModoDientes] = useState<'permanentes' | 'temporales' | 'ambas'>('ambas');
@@ -49,8 +51,8 @@ function ContenidoPaciente({ params }: Props) {
     { id: 1, diente: '#11', cara: 'GENERAL', estado: 'TRATAMIENTO', observacion: 'Extracción Compleja / Pieza Retenida', arancel: 45000 }
   ]);
 
-  // Cargar datos del paciente desde el backend
   useEffect(() => {
+    setMounted(true);
     const cargarDatos = async () => {
       try {
         const res = await fetch(`http://localhost:4000/api/pacientes/${id}`);
@@ -58,7 +60,6 @@ function ContenidoPaciente({ params }: Props) {
           const data = await res.json();
           setPaciente(data);
         } else {
-          // Si no responde la API individual, creamos una referencia limpia con la ID
           setPaciente({
             id: Number(id),
             nombre: 'Hugo',
@@ -71,12 +72,14 @@ function ContenidoPaciente({ params }: Props) {
         }
       } catch (error) {
         console.error('Error al cargar paciente:', error);
-      } finally {
-        setCargando(false);
       }
     };
     cargarDatos();
   }, [id]);
+
+  if (!mounted) {
+    return <div className="min-h-screen bg-slate-100 flex items-center justify-center text-xs text-gray-400 font-bold">Cargando expediente #{id}...</div>;
+  }
 
   const handleCerrarSesion = () => {
     localStorage.removeItem('token');
@@ -84,7 +87,6 @@ function ContenidoPaciente({ params }: Props) {
     router.push('/login');
   };
 
-  // Click en una pieza del odontograma
   const handlePiezaClick = (numeroDiente: string) => {
     const estadoActual = estadosPiezas[numeroDiente];
     const nuevoEstado = estadoActual === herramienta ? 'normal' : herramienta;
@@ -109,7 +111,6 @@ function ContenidoPaciente({ params }: Props) {
 
   const totalAranceles = intervenciones.reduce((acc, curr) => acc + curr.arancel, 0);
 
-  // Definición de Piezas Dentales
   const piezasPermanentesArriba = ['18', '17', '16', '15', '14', '13', '12', '11', '21', '22', '23', '24', '25', '26', '27', '28'];
   const piezasPermanentesAbajo = ['48', '47', '46', '45', '44', '43', '42', '41', '31', '32', '33', '34', '35', '36', '37', '38'];
   const piezasTemporalesArriba = ['55', '54', '53', '52', '51', '61', '62', '63', '64', '65'];
@@ -128,9 +129,8 @@ function ContenidoPaciente({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-slate-100 text-gray-900 flex flex-col">
-      {/* CABECERA UNIFICADA DE NAVEGACIÓN GLOBAL */}
+      {/* CABECERA UNIFICADA */}
       <header className="bg-blue-600 text-white py-4 px-8 shadow-md flex justify-between items-center">
-        {/* LOGO ENLAZADO A LANDING PRINCIPAL */}
         <Link href="/" className="group cursor-pointer">
           <h1 className="text-2xl font-black tracking-tight leading-none group-hover:text-blue-100 transition-colors">
             MeDent
@@ -141,7 +141,6 @@ function ContenidoPaciente({ params }: Props) {
         </Link>
 
         <div className="flex items-center gap-3">
-          {/* Selector de Modo */}
           <div className="flex items-center gap-2 bg-blue-700 px-3 py-1.5 rounded-xl border border-blue-500">
             <span className="text-xs font-extrabold text-blue-100">Modo:</span>
             <select
@@ -181,10 +180,10 @@ function ContenidoPaciente({ params }: Props) {
         </div>
       </header>
 
-      {/* CONTENIDO PRINCIPAL FICHA PACIENTE */}
+      {/* CONTENIDO PRINCIPAL */}
       <main className="flex-1 max-w-7xl mx-auto w-full p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
         
-        {/* PANEL LATERAL: INFORMACIÓN DEL PACIENTE */}
+        {/* PANEL LATERAL */}
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 h-fit space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 font-black flex items-center justify-center text-lg border border-blue-200">
@@ -216,10 +215,8 @@ function ContenidoPaciente({ params }: Props) {
           </div>
         </div>
 
-        {/* DETALLE PRINCIPAL: ODONTOGRAMA Y REGISTROS */}
+        {/* DETALLE PRINCIPAL */}
         <div className="md:col-span-3 space-y-6">
-          
-          {/* TAB PANEL */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-6">
             <div className="flex items-center gap-6 border-b pb-3 text-xs font-black text-gray-500">
               <span className="text-blue-600 border-b-2 border-blue-600 pb-3 cursor-pointer">
@@ -233,10 +230,8 @@ function ContenidoPaciente({ params }: Props) {
               </span>
             </div>
 
-            {/* CONTROLES DEL ODONTOGRAMA */}
+            {/* CONTROLES */}
             <div className="flex flex-wrap justify-between items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200">
-              
-              {/* Selectores de Vista Dentición */}
               <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200 text-xs font-bold">
                 <span className="text-gray-400 px-2 text-[10px] uppercase">Vista:</span>
                 <button 
@@ -259,7 +254,6 @@ function ContenidoPaciente({ params }: Props) {
                 </button>
               </div>
 
-              {/* Lápiz / Herramienta activa */}
               <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
                 <span className="text-gray-400 text-[10px] uppercase">✏️ Lápiz:</span>
                 <button onClick={() => setHerramienta('caries')} className={`px-2 py-1 rounded-lg border ${herramienta === 'caries' ? 'bg-red-500 text-white border-red-600 ring-2 ring-red-300' : 'bg-red-50 text-red-700 border-red-200'}`}>
@@ -280,17 +274,13 @@ function ContenidoPaciente({ params }: Props) {
               </div>
             </div>
 
-            {/* GRILLA INTERACTIVA DEL ODONTOGRAMA */}
+            {/* GRILLA ODONTOGRAMA */}
             <div className="space-y-6 py-4 overflow-x-auto">
-              
-              {/* PIEZAS PERMANENTES */}
               {(modoDientes === 'permanentes' || modoDientes === 'ambas') && (
                 <div className="space-y-3">
                   <h4 className="text-[10px] font-black uppercase text-gray-400 text-center tracking-widest">
                     Piezas Permanentes (Adultos)
                   </h4>
-                  
-                  {/* Arriba */}
                   <div className="flex justify-center gap-1">
                     {piezasPermanentesArriba.map(nro => (
                       <div key={nro} className="text-center">
@@ -305,7 +295,6 @@ function ContenidoPaciente({ params }: Props) {
                     ))}
                   </div>
 
-                  {/* Abajo */}
                   <div className="flex justify-center gap-1 pt-2">
                     {piezasPermanentesAbajo.map(nro => (
                       <div key={nro} className="text-center">
@@ -322,13 +311,11 @@ function ContenidoPaciente({ params }: Props) {
                 </div>
               )}
 
-              {/* PIEZAS TEMPORALES */}
               {(modoDientes === 'temporales' || modoDientes === 'ambas') && (
                 <div className="space-y-3 border-t pt-4">
                   <h4 className="text-[10px] font-black uppercase text-gray-400 text-center tracking-widest">
                     Piezas Temporales (Niños)
                   </h4>
-
                   <div className="flex justify-center gap-1">
                     {piezasTemporalesArriba.map(nro => (
                       <div key={nro} className="text-center">
@@ -360,7 +347,7 @@ function ContenidoPaciente({ params }: Props) {
               )}
             </div>
 
-            {/* TABLA DE INTERVENCIONES Y ARANCELES */}
+            {/* TABLA ARANCELES */}
             <div className="border-t pt-4 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-black text-gray-800">Intervenciones Registradas</h3>

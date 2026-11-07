@@ -2,248 +2,224 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-
-type RolStaff = 'Administrador' | 'Contador' | 'Recursos Humanos' | 'Odontologo' | 'Supervisor' | 'Secretaria';
-
-interface ModuloPermiso {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  icono: string;
-  ruta: string;
-}
-
-const MODULOS_SISTEMA: ModuloPermiso[] = [
-  { id: 'agenda', nombre: 'Agenda & Turnos', descripcion: 'Grilla de turnos diaria, semanal y mensual', icono: '🗓️', ruta: '/turnos' },
-  { id: 'pacientes', nombre: 'Pacientes e Historias Clínicas', descripcion: 'Fichas médicas, antecedentes y datos personales', icono: '📑', ruta: '/pacientes' },
-  { id: 'tratamientos', nombre: 'Tratamientos & Odontograma', descripcion: 'Prácticas odontológicas y ficha dental', icono: '🩺', ruta: '/pacientes' },
-  { id: 'finanzas', nombre: 'Finanzas & Aranceles', descripcion: 'Caja, facturación, honorarios y reportes de cobros', icono: '💰', ruta: '/dashboard' },
-  { id: 'rrhh', nombre: 'Recursos Humanos', descripcion: 'Legajos de personal, asistencias y pagos', icono: '👥', ruta: '/dashboard' },
-  { id: 'configuracion', nombre: 'Configuración del Sistema', descripcion: 'Ajustes globales de clínica y usuarios', icono: '⚙️', ruta: '/dashboard' },
-];
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [rolActivo, setRolActivo] = useState<RolStaff>('Administrador');
-  const [modalConfigOpen, setModalConfigOpen] = useState(false);
-  const [rolAConfigurar, setRolAConfigurar] = useState<RolStaff>('Administrador');
-
-  const [permisos, setPermisos] = useState<Record<RolStaff, Record<string, boolean>>>({
-    Administrador: { agenda: true, pacientes: true, tratamientos: true, finanzas: true, rrhh: true, configuracion: true },
-    Contador: { agenda: false, pacientes: false, tratamientos: false, finanzas: true, rrhh: true, configuracion: false },
-    'Recursos Humanos': { agenda: false, pacientes: false, tratamientos: false, finanzas: false, rrhh: true, configuracion: false },
-    Odontologo: { agenda: true, pacientes: true, tratamientos: true, finanzas: false, rrhh: false, configuracion: false },
-    Supervisor: { agenda: true, pacientes: true, tratamientos: true, finanzas: true, rrhh: true, configuracion: false },
-    Secretaria: { agenda: true, pacientes: true, tratamientos: false, finanzas: true, rrhh: false, configuracion: false },
-  });
+  const [mounted, setMounted] = useState(false);
+  const [rol, setRol] = useState('Administrador');
 
   useEffect(() => {
-    const guardados = localStorage.getItem('medent_permisos_staff');
-    if (guardados) {
-      try { setPermisos(JSON.parse(guardados)); } catch (e) { console.error(e); }
-    }
+    setMounted(true);
   }, []);
 
-  const togglePermiso = (rol: RolStaff, moduloId: string) => {
-    const nuevos = {
-      ...permisos,
-      [rol]: {
-        ...permisos[rol],
-        [moduloId]: !permisos[rol][moduloId]
-      }
-    };
-    setPermisos(nuevos);
-    localStorage.setItem('medent_permisos_staff', JSON.stringify(nuevos));
-  };
-
-  const handleCerrarSesion = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('usuario');
-    router.push('/login');
-  };
-
-  const ROLES_LISTA: RolStaff[] = [
-    'Administrador',
-    'Contador',
-    'Recursos Humanos',
-    'Odontologo',
-    'Supervisor',
-    'Secretaria'
-  ];
+  if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-slate-100 text-gray-900 flex flex-col">
-      {/* CABECERA CON LOGO Y BOTÓN DE CERRAR SESIÓN */}
-      <header className="bg-blue-600 text-white py-4 px-8 shadow-md flex justify-between items-center">
-        {/* LOGO REDIRECCIÓN A LANDING PRINCIPAL */}
-        <Link href="/" className="group cursor-pointer">
-          <h1 className="text-2xl font-black tracking-tight leading-none group-hover:text-blue-100 transition-colors">
-            MeDent
-          </h1>
-          <p className="text-[10px] uppercase font-bold text-blue-100 tracking-widest mt-0.5">
-            Clínica Odontológica — Panel Principal
+    <div className="min-h-screen bg-slate-100 text-gray-800 flex flex-col justify-between">
+      {/* HEADER NAVEGACIÓN DASHBOARD */}
+      <header className="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
+        <Link href="/" className="flex flex-col hover:opacity-90 transition-opacity">
+          <h1 className="text-xl font-black">MeDent</h1>
+          <p className="text-[10px] uppercase font-bold text-blue-100">
+            CLÍNICA ODONTOLÓGICA — PANEL PRINCIPAL
           </p>
         </Link>
 
-        <div className="flex items-center gap-3">
-          <Link href="/turnos" className="bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2 px-4 rounded-xl text-xs border border-blue-500 transition-colors">
-            🗓️ Ir a la Agenda
+        <div className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs py-2 px-3 rounded-xl border border-blue-400"
+          >
+            🏠 Página Principal
           </Link>
 
-          {/* SELECTOR DE ROL Y MODO EN TIEMPO REAL */}
-          <div className="flex items-center gap-2 bg-blue-700 px-3 py-1.5 rounded-xl border border-blue-500">
-            <span className="text-xs font-extrabold text-blue-100">Modo:</span>
+          <Link
+            href="/turnos"
+            className="bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs py-2 px-3 rounded-xl border border-blue-400"
+          >
+            🗓️ Agenda
+          </Link>
+
+          <div className="flex items-center gap-1.5 bg-blue-700 px-2.5 py-1 rounded-xl border border-blue-500">
+            <span className="text-xs font-bold text-blue-100">Modo:</span>
             <select
-              value={rolActivo}
-              onChange={(e) => setRolActivo(e.target.value as RolStaff)}
-              className="bg-white text-blue-900 font-extrabold text-xs py-1 px-2 rounded-lg outline-none cursor-pointer"
+              value={rol}
+              onChange={(e) => setRol(e.target.value)}
+              className="bg-white text-blue-900 font-extrabold text-xs p-1 rounded-lg outline-none cursor-pointer"
             >
-              {ROLES_LISTA.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
+              <option value="Administrador">Administrador</option>
+              <option value="Odontólogo">Odontólogo</option>
+              <option value="Secretaría">Secretaría</option>
             </select>
           </div>
 
-          <button 
-            onClick={() => {
-              setRolAConfigurar(rolActivo);
-              setModalConfigOpen(true);
-            }}
-            className="bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs py-2 px-3 rounded-xl border border-blue-500 transition-colors"
+          <Link
+            href="/configuracion"
+            className="bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs py-2 px-3 rounded-xl border border-blue-400"
           >
-            ⚙️ Permisos de Accesos
-          </button>
+            ⚙️ Permisos
+          </Link>
 
-          {/* BOTÓN CERRAR SESIÓN */}
-          <button
-            onClick={handleCerrarSesion}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-xs transition-colors"
+          <Link
+            href="/login"
+            className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-sm"
           >
             🚪 Cerrar Sesión
-          </button>
+          </Link>
         </div>
       </header>
 
-      {/* CONTENIDO PRINCIPAL DEL DASHBOARD */}
-      <main className="flex-1 max-w-7xl mx-auto w-full p-6 space-y-6">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* CONTENIDO DASHBOARD */}
+      <main className="p-6 max-w-6xl mx-auto w-full space-y-6 flex-1">
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex justify-between items-center">
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-black text-gray-800">Panel de Control General</h2>
-              <span className="text-xs font-black bg-blue-100 text-blue-800 px-3 py-1 rounded-full uppercase border border-blue-200">
-                Modo {rolActivo}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 font-medium mt-1">
-              Visualizando módulos autorizados para el rol de <strong className="text-gray-700">{rolActivo}</strong>.
+            <h2 className="text-xl font-black text-gray-900">Panel de Control General</h2>
+            <p className="text-xs text-gray-500 font-medium mt-0.5">
+              Visualizando módulos autorizados para el rol de <strong>{rol}</strong>.
             </p>
           </div>
+          <span className="bg-blue-100 text-blue-900 text-xs font-black px-3 py-1 rounded-xl uppercase">
+            MODO {rol}
+          </span>
         </div>
 
-        {/* GRILLA DE MÓDULOS CON VISIBILIDAD DINÁMICA */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {MODULOS_SISTEMA.map((modulo) => {
-            const tieneAcceso = permisos[rolActivo]?.[modulo.id];
-
-            return (
-              <div 
-                key={modulo.id}
-                className={`p-6 rounded-3xl border transition-all flex flex-col justify-between space-y-4 ${
-                  tieneAcceso 
-                    ? 'bg-white shadow-sm border-gray-200 hover:border-blue-400 hover:shadow-md' 
-                    : 'bg-gray-50 border-gray-200 opacity-40 grayscale'
-                }`}
-              >
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-3xl">{modulo.icono}</span>
-                    <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
-                      tieneAcceso ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
-                    }`}>
-                      {tieneAcceso ? 'Habilitado' : 'Sin Acceso'}
-                    </span>
-                  </div>
-
-                  <h3 className="text-base font-black text-gray-800">{modulo.nombre}</h3>
-                  <p className="text-xs text-gray-500 font-medium leading-relaxed">{modulo.descripcion}</p>
-                </div>
-
-                {tieneAcceso ? (
-                  <Link 
-                    href={modulo.ruta}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-2.5 rounded-xl transition-colors text-center block shadow-2xs"
-                  >
-                    Ingresar al Módulo →
-                  </Link>
-                ) : (
-                  <button 
-                    disabled 
-                    className="w-full bg-gray-200 text-gray-500 font-bold text-xs py-2.5 rounded-xl text-center cursor-not-allowed"
-                  >
-                    🔒 Bloqueado para {rolActivo}
-                  </button>
-                )}
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-2xl">🗓️</span>
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md uppercase">HABILITADO</span>
               </div>
-            );
-          })}
+              <h3 className="text-base font-black text-gray-900">Agenda & Turnos</h3>
+              <p className="text-xs text-gray-500">Grilla de turnos diaria, semanal y mensual.</p>
+            </div>
+            <Link href="/turnos" className="bg-blue-600 hover:bg-blue-700 text-white text-center font-bold text-xs py-2.5 px-4 rounded-xl transition-colors block">
+              Ingresar al Módulo →
+            </Link>
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-2xl">👥</span>
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md uppercase">HABILITADO</span>
+              </div>
+              <h3 className="text-base font-black text-gray-900">Pacientes e Historias Clínicas</h3>
+              <p className="text-xs text-gray-500">Fichas médicas, antecedentes y datos personales.</p>
+            </div>
+            <Link href="/pacientes" className="bg-blue-600 hover:bg-blue-700 text-white text-center font-bold text-xs py-2.5 px-4 rounded-xl transition-colors block">
+              Ingresar al Módulo →
+            </Link>
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-2xl">🩺</span>
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md uppercase">HABILITADO</span>
+              </div>
+              <h3 className="text-base font-black text-gray-900">Tratamientos & Odontograma</h3>
+              <p className="text-xs text-gray-500">Prácticas odontológicas y ficha dental.</p>
+            </div>
+            <button onClick={() => alert('Módulo de Odontograma en desarrollo.')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-colors">
+              Ingresar al Módulo →
+            </button>
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-2xl">💰</span>
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md uppercase">HABILITADO</span>
+              </div>
+              <h3 className="text-base font-black text-gray-900">Finanzas & Aranceles</h3>
+              <p className="text-xs text-gray-500">Caja, facturación, honorarios y reportes de cobros.</p>
+            </div>
+            <button onClick={() => alert('Módulo de Finanzas en desarrollo.')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-colors">
+              Ingresar al Módulo →
+            </button>
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-2xl">👨‍⚕️</span>
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md uppercase">HABILITADO</span>
+              </div>
+              <h3 className="text-base font-black text-gray-900">Recursos Humanos</h3>
+              <p className="text-xs text-gray-500">Legajos de personal, asistencias y pagos.</p>
+            </div>
+            <button onClick={() => alert('Módulo de Personal en desarrollo.')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-colors">
+              Ingresar al Módulo →
+            </button>
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-2xl">⚙️</span>
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md uppercase">HABILITADO</span>
+              </div>
+              <h3 className="text-base font-black text-gray-900">Configuración del Sistema</h3>
+              <p className="text-xs text-gray-500">Ajustes globales de clínica, marca, WhatsApp y CAT.</p>
+            </div>
+            <Link href="/configuracion" className="bg-blue-600 hover:bg-blue-700 text-white text-center font-bold text-xs py-2.5 px-4 rounded-xl transition-colors block">
+              Ingresar al Módulo →
+            </Link>
+          </div>
         </div>
       </main>
 
-      {/* MODAL CONFIGURACIÓN DE PERMISOS */}
-      {modalConfigOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 space-y-5">
-            <div className="flex justify-between items-center border-b pb-3">
-              <div>
-                <h3 className="text-lg font-black text-gray-800">⚙️ Configuración de Permisos por Rol</h3>
-                <p className="text-xs text-gray-500 font-medium">Activa o desactiva módulos para cada modo.</p>
-              </div>
-              <button onClick={() => setModalConfigOpen(false)} className="text-gray-400 hover:text-black font-bold">✕</button>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-bold text-gray-700">Seleccionar Rol a Configurar:</label>
-              <select
-                value={rolAConfigurar}
-                onChange={(e) => setRolAConfigurar(e.target.value as RolStaff)}
-                className="w-full text-xs font-bold border border-gray-300 rounded-xl p-3 bg-gray-50 text-blue-900 outline-none"
-              >
-                {ROLES_LISTA.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              {MODULOS_SISTEMA.map((mod) => {
-                const activo = permisos[rolAConfigurar]?.[mod.id] || false;
-                return (
-                  <div 
-                    key={mod.id}
-                    onClick={() => togglePermiso(rolAConfigurar, mod.id)}
-                    className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
-                      activo ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200 opacity-60'
-                    }`}
-                  >
-                    <span className="text-xs font-bold text-gray-800">{mod.icono} {mod.nombre}</span>
-                    <input type="checkbox" checked={activo} onChange={() => {}} className="w-4 h-4 text-blue-600 cursor-pointer" />
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-end pt-3 border-t">
-              <button
-                onClick={() => setModalConfigOpen(false)}
-                className="px-6 py-2.5 text-xs font-extrabold bg-blue-600 text-white rounded-xl shadow-sm hover:bg-blue-700"
-              >
-                Guardar Cambios
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <footer className="py-4 text-center text-xs text-gray-400 border-t bg-white">
+        MeDent SaaS Odontológico — Panel Principal de Control
+      </footer>
     </div>
   );
 }
+
+{/* TARJETA DE PACIENTES EN APP/DASHBOARD/PAGE.TSX */}
+<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-4">
+  <div className="flex justify-between items-start">
+    <div className="w-10 h-10 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-xl">
+      👥
+    </div>
+    <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full uppercase">
+      Habilitado
+    </span>
+  </div>
+
+  <div>
+    <h3 className="text-base font-black text-gray-900">Pacientes e Historias Clínicas</h3>
+    <p className="text-xs text-gray-500 mt-1">Fichas médicas, antecedentes y datos personales.</p>
+  </div>
+
+  <Link 
+    href="/pacientes/lista" 
+    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-2.5 px-4 rounded-xl shadow-sm transition-colors block text-center"
+  >
+    Ingresar al Módulo →
+  </Link>
+</div> 
+
+{/* TARJETA DE PACIENTES EN APP/DASHBOARD/PAGE.TSX */}
+<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-4">
+  <div className="flex justify-between items-start">
+    <div className="w-10 h-10 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-xl">
+      👥
+    </div>
+    <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full uppercase">
+      Habilitado
+    </span>
+  </div>
+
+  <div>
+    <h3 className="text-base font-black text-gray-900">Pacientes e Historias Clínicas</h3>
+    <p className="text-xs text-gray-500 mt-1">Fichas médicas, antecedentes y datos personales.</p>
+  </div>
+
+  <Link 
+    href="/pacientes" 
+    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-2.5 px-4 rounded-xl shadow-sm transition-colors block text-center"
+  >
+    Ingresar al Módulo →
+  </Link>
+</div>
