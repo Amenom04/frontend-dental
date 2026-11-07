@@ -860,3 +860,52 @@ export default function AgendaInternaPage() {
     </div>
   );
 }
+
+{/* HEADER SUPERIOR UNIFICADO CON DASHBOARD Y CERRAR SESIÓN */}
+<header className="bg-blue-600 text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 no-print">
+  <Link href="/" className="flex flex-col hover:opacity-90 transition-opacity cursor-pointer">
+    <h1 className="text-2xl font-black tracking-tight leading-none">{config.nombreClinica || 'MeDent'}</h1>
+    <p className="text-[10px] uppercase font-bold text-blue-100 tracking-widest mt-0.5">
+      CLÍNICA ODONTOLÓGICA — AGENDA INTERNA DE CONTROL
+    </p>
+  </Link>
+
+  <div className="flex flex-wrap gap-2 items-center">
+    <button
+      onClick={() => { setTurnoIdAReprogramar(null); setMostrarModalManual(true); }}
+      className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 shadow-sm transition-colors cursor-pointer"
+    >
+      + Agendar Turno Manual
+    </button>
+
+    <button
+      onClick={cargarTurnos}
+      className="bg-blue-700 hover:bg-blue-800 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors cursor-pointer"
+    >
+      🔄 Actualizar
+    </button>
+
+    <button
+      onClick={() => window.print()}
+      className="bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-indigo-400 shadow-sm transition-colors cursor-pointer"
+    >
+      🖨️ Imprimir Agenda
+    </button>
+
+    <Link href="/dashboard" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
+      📊 Dashboard
+    </Link>
+
+    <Link href="/configuracion" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
+      ⚙️ Configuración
+    </Link>
+
+    <Link href="/" className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-slate-700 transition-colors">
+      🏠 Inicio
+    </Link>
+
+    <Link href="/login" className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs py-2 px-3 rounded-xl shadow-sm transition-colors">
+      🚪 Cerrar Sesión
+    </Link>
+  </div>
+</header>

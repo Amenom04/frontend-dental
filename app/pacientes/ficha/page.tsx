@@ -3,15 +3,16 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useConfig } from '../../../context/ConfigContext';
 
-interface Paciente {
+interface DocumentoClinico {
   id: number;
   nombre: string;
-  apellido?: string;
-  dni?: string;
-  telefono?: string;
-  email?: string;
-  obra_social?: string;
+  categoria: 'Pre-quirúrgicos' | 'Pantomografías / Radiografías' | 'Fotografías e Imágenes' | 'Informes y Consentimientos';
+  fecha: string;
+  tipo: string;
+  url: string;
+  tamanio: string;
 }
 
 interface RegistroOdontograma {
@@ -19,38 +20,46 @@ interface RegistroOdontograma {
   pieza: number;
   cara: string;
   estado: string;
-  observaciones: string;
   fecha: string;
-}
-
-interface DocumentoClinico {
-  id: number;
-  nombre: string;
-  categoria: string;
-  fecha: string;
-  url: string;
 }
 
 type ColorEstado = 'ninguno' | 'caries' | 'obturado' | 'endodoncia' | 'corona' | 'ausente';
 
-function ContenidoFichaPaciente() {
+function FichaPacienteContent() {
+  const { config } = useConfig();
   const searchParams = useSearchParams();
-  const pacienteId = searchParams.get('id');
+  const pacienteId = searchParams.get('id') || '1';
 
   const [mounted, setMounted] = useState(false);
-  const [pacienteActivo, setPacienteActivo] = useState<Paciente | null>(null);
-  const [pestanaActiva, setPestanaActiva] = useState<'odontograma' | 'estudios'>('odontograma');
+  const [pestanaActiva, setPestanaActiva] = useState<'odontograma' | 'documentos'>('documentos');
+  
+  // Datos del Paciente
+  const [paciente] = useState({
+    id: pacienteId,
+    nombre: 'Eduardo Medran',
+    dni: '12321664',
+    telefono: '03515941281',
+    email: 'semedran@gmail.com',
+    obraSocial: 'Particular'
+  });
 
-  // Dentadura y Diagnósticos
+  /* =========================================
+     ESTADOS: ESTUDIOS Y DOCUMENTOS
+  ========================================= */
+  const [documentos, setDocumentos] = useState<DocumentoClinico[]>([]);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>('Todas');
+  const [modalSubir, setModalSubir] = useState(false);
+  const [nombreArchivo, setNombreArchivo] = useState('');
+  const [catSubida, setCatSubida] = useState<DocumentoClinico['categoria']>('Pantomografías / Radiografías');
+  const [archivoTemp, setArchivoTemp] = useState<File | null>(null);
+
+  /* =========================================
+     ESTADOS: ODONTOGRAMA DE 5 CARAS
+  ========================================= */
   const [tipoDentadura, setTipoDentadura] = useState<'adulta' | 'primaria' | 'mixta'>('adulta');
   const [herramientaActiva, setHerramientaActiva] = useState<ColorEstado>('caries');
   const [carasColoreadas, setCarasColoreadas] = useState<{ [key: string]: ColorEstado }>({});
   const [registrosDentales, setRegistrosDentales] = useState<RegistroOdontograma[]>([]);
-
-  // Documentos
-  const [filtroEstudio, setFiltroEstudio] = useState('Todas');
-  const [documentos, setDocumentos] = useState<DocumentoClinico[]>([]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Piezas Dentales FDI
   const adultaSupCuad1 = [18, 17, 16, 15, 14, 13, 12, 11];
@@ -73,37 +82,68 @@ function ContenidoFichaPaciente() {
 
   useEffect(() => {
     setMounted(true);
-    if (pacienteId) {
-      fetch(`http://localhost:4000/api/pacientes/${pacienteId}`)
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data) setPacienteActivo(data);
-          else {
-            setPacienteActivo({
-              id: Number(pacienteId),
-              nombre: 'Eduardo',
-              apellido: 'Medran',
-              dni: '12321654',
-              telefono: '03515941281',
-              email: 'semedran@gmail.com',
-              obra_social: 'Particular'
-            });
-          }
-        })
-        .catch(() => {
-          setPacienteActivo({
-            id: Number(pacienteId),
-            nombre: 'Eduardo',
-            apellido: 'Medran',
-            dni: '12321654',
-            telefono: '03515941281',
-            email: 'semedran@gmail.com',
-            obra_social: 'Particular'
-          });
-        });
+    // Cargar documentos
+    const docsGuardados = localStorage.getItem(`medent_docs_paciente_${pacienteId}`);
+    if (docsGuardados) setDocumentos(JSON.parse(docsGuardados));
+
+    // Cargar Odontograma
+    const odontoGuardado = localStorage.getItem(`medent_odonto_paciente_${pacienteId}`);
+    if (odontoGuardado) {
+      const data = JSON.parse(odontoGuardado);
+      setCarasColoreadas(data.caras || {});
+      setRegistrosDentales(data.registros || []);
     }
   }, [pacienteId]);
 
+  /* =========================================
+     MÉTODOS: ESTUDIOS Y DOCUMENTOS
+  ========================================= */
+  const abrirModalSubida = () => {
+    if (categoriaSeleccionada !== 'Todas') {
+      setCatSubida(categoriaSeleccionada as DocumentoClinico['categoria']);
+    } else {
+      setCatSubida('Pantomografías / Radiografías');
+    }
+    setModalSubir(true);
+  };
+
+  const guardarDocumento = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nombreArchivo && !archivoTemp) return;
+
+    const nuevoDoc: DocumentoClinico = {
+      id: Date.now(),
+      nombre: nombreArchivo || archivoTemp?.name || 'Documento',
+      categoria: catSubida,
+      fecha: new Date().toLocaleDateString('es-AR'),
+      tipo: archivoTemp?.type || 'application/pdf',
+      url: archivoTemp ? URL.createObjectURL(archivoTemp) : '#',
+      tamanio: archivoTemp ? `${(archivoTemp.size / (1024 * 1024)).toFixed(1)} MB` : '0.5 MB'
+    };
+
+    const actualizados = [nuevoDoc, ...documentos];
+    setDocumentos(actualizados);
+    localStorage.setItem(`medent_docs_paciente_${pacienteId}`, JSON.stringify(actualizados));
+    setCategoriaSeleccionada(catSubida);
+    setModalSubir(false);
+    setNombreArchivo('');
+    setArchivoTemp(null);
+  };
+
+  const eliminarDocumento = (id: number) => {
+    if (confirm('¿Eliminar este documento clínico?')) {
+      const filtrados = documentos.filter(d => d.id !== id);
+      setDocumentos(filtrados);
+      localStorage.setItem(`medent_docs_paciente_${pacienteId}`, JSON.stringify(filtrados));
+    }
+  };
+
+  const categoriasLista = ['Todas', 'Pre-quirúrgicos', 'Pantomografías / Radiografías', 'Fotografías e Imágenes', 'Informes y Consentimientos'];
+  const documentosFiltrados = categoriaSeleccionada === 'Todas' ? documentos : documentos.filter(d => d.categoria === categoriaSeleccionada);
+
+  /* =========================================
+     MÉTODOS: ODONTOGRAMA
+  ========================================= */
   const getColorCara = (clave: string) => {
     const estado = carasColoreadas[clave] || 'ninguno';
     switch (estado) {
@@ -116,277 +156,216 @@ function ContenidoFichaPaciente() {
     }
   };
 
-  // CLIC IZQUIERDO: MARCAR SECTOR SIN REPETIR REGISTROS DUPLICADOS EN EL HISTORIAL
+  const guardarOdontogramaLocal = (nuevasCaras: any, nuevosRegistros: any) => {
+    localStorage.setItem(`medent_odonto_paciente_${pacienteId}`, JSON.stringify({
+      caras: nuevasCaras,
+      registros: nuevosRegistros
+    }));
+  };
+
   const handleClicIzquierdo = (pieza: number, caraClave: string) => {
     const clave = `${pieza}-${caraClave}`;
     const nombreCaraEsp = NOMBRES_CARAS_ESPANOL[caraClave] || caraClave;
 
-    setCarasColoreadas(prev => ({
-      ...prev,
-      [clave]: herramientaActiva
-    }));
+    const nuevasCaras = { ...carasColoreadas, [clave]: herramientaActiva };
+    setCarasColoreadas(nuevasCaras);
 
     const nuevoRegistro: RegistroOdontograma = {
       id: Date.now(),
       pieza,
       cara: nombreCaraEsp,
       estado: herramientaActiva.toUpperCase(),
-      observaciones: `Marcado sector ${nombreCaraEsp} en diente #${pieza}`,
       fecha: new Date().toLocaleDateString('es-AR')
     };
 
-    // Eliminamos cualquier registro previo para la misma pieza y cara antes de añadir el nuevo
-    setRegistrosDentales(prev => [
-      nuevoRegistro,
-      ...prev.filter(r => !(r.pieza === pieza && r.cara === nombreCaraEsp))
-    ]);
+    const nuevosRegistros = [nuevoRegistro, ...registrosDentales.filter(r => !(r.pieza === pieza && r.cara === nombreCaraEsp))];
+    setRegistrosDentales(nuevosRegistros);
+    guardarOdontogramaLocal(nuevasCaras, nuevosRegistros);
   };
 
-  // CLIC DERECHO: DESMARCAR SECTOR (BORRAR)
   const handleClicDerecho = (e: React.MouseEvent, pieza: number, caraClave: string) => {
     e.preventDefault();
     const clave = `${pieza}-${caraClave}`;
     const nombreCaraEsp = NOMBRES_CARAS_ESPANOL[caraClave] || caraClave;
 
-    setCarasColoreadas(prev => {
-      const nuevoMapa = { ...prev };
-      delete nuevoMapa[clave];
-      return nuevoMapa;
-    });
+    const nuevasCaras = { ...carasColoreadas };
+    delete nuevasCaras[clave];
+    setCarasColoreadas(nuevasCaras);
 
-    setRegistrosDentales(prev => prev.filter(r => !(r.pieza === pieza && r.cara === nombreCaraEsp)));
+    const nuevosRegistros = registrosDentales.filter(r => !(r.pieza === pieza && r.cara === nombreCaraEsp));
+    setRegistrosDentales(nuevosRegistros);
+    guardarOdontogramaLocal(nuevasCaras, nuevosRegistros);
   };
 
-  const limpiarOdontogramaCompleto = () => {
-    if (confirm('¿Deseas borrar todas las marcas del odontograma actual?')) {
+  const limpiarOdontograma = () => {
+    if (confirm('¿Borrar todas las marcas del odontograma?')) {
       setCarasColoreadas({});
       setRegistrosDentales([]);
+      guardarOdontogramaLocal({}, []);
     }
-  };
-
-  const handleSubirArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      const nuevoDoc: DocumentoClinico = {
-        id: Date.now(),
-        nombre: file.name,
-        categoria: filtroEstudio === 'Todas' ? 'Placas / Periapicales' : filtroEstudio,
-        fecha: new Date().toLocaleDateString('es-AR'),
-        url: URL.createObjectURL(file)
-      };
-      setDocumentos([nuevoDoc, ...documentos]);
-      alert(`✅ Archivo "${file.name}" cargado exitosamente.`);
-    }
-  };
-
-  if (!mounted) return null;
-
-  const getIniciales = (nombre: string, apellido?: string) => {
-    const n = (nombre || '')[0] || 'P';
-    const a = (apellido || '')[0] || '';
-    return `${n}${a}`.toUpperCase();
   };
 
   const DienteGeometriaSVG = ({ pieza }: { pieza: number }) => (
     <div className="flex flex-col items-center group cursor-pointer" onContextMenu={e => e.preventDefault()}>
-      <span className="text-[11px] font-black text-gray-700 mb-1 group-hover:text-blue-600 select-none">
-        {pieza}
-      </span>
-      <svg width="36" height="36" viewBox="0 0 100 100" className="border border-gray-400 bg-white rounded shadow-sm hover:scale-105 transition-transform">
-        <polygon 
-          points="0,0 100,0 75,25 25,25" 
-          fill={getColorCara(`${pieza}-top`)} 
-          stroke="#475569" 
-          strokeWidth="3" 
-          onClick={() => handleClicIzquierdo(pieza, 'top')}
-          onContextMenu={e => handleClicDerecho(e, pieza, 'top')}
-        />
-        <polygon 
-          points="100,0 100,100 75,75 75,25" 
-          fill={getColorCara(`${pieza}-right`)} 
-          stroke="#475569" 
-          strokeWidth="3" 
-          onClick={() => handleClicIzquierdo(pieza, 'right')}
-          onContextMenu={e => handleClicDerecho(e, pieza, 'right')}
-        />
-        <polygon 
-          points="0,100 100,100 75,75 25,75" 
-          fill={getColorCara(`${pieza}-bottom`)} 
-          stroke="#475569" 
-          strokeWidth="3" 
-          onClick={() => handleClicIzquierdo(pieza, 'bottom')}
-          onContextMenu={e => handleClicDerecho(e, pieza, 'bottom')}
-        />
-        <polygon 
-          points="0,0 25,25 25,75 0,100" 
-          fill={getColorCara(`${pieza}-left`)} 
-          stroke="#475569" 
-          strokeWidth="3" 
-          onClick={() => handleClicIzquierdo(pieza, 'left')}
-          onContextMenu={e => handleClicDerecho(e, pieza, 'left')}
-        />
-        <rect 
-          x="25" 
-          y="25" 
-          width="50" 
-          height="50" 
-          fill={getColorCara(`${pieza}-center`)} 
-          stroke="#475569" 
-          strokeWidth="3" 
-          onClick={() => handleClicIzquierdo(pieza, 'center')}
-          onContextMenu={e => handleClicDerecho(e, pieza, 'center')}
-        />
+      <span className="text-[11px] font-black text-slate-700 mb-1 select-none">{pieza}</span>
+      <svg width="36" height="36" viewBox="0 0 100 100" className="border border-slate-400 bg-white rounded shadow-sm hover:scale-105 transition-transform">
+        <polygon points="0,0 100,0 75,25 25,25" fill={getColorCara(`${pieza}-top`)} stroke="#475569" strokeWidth="3" onClick={() => handleClicIzquierdo(pieza, 'top')} onContextMenu={e => handleClicDerecho(e, pieza, 'top')} />
+        <polygon points="100,0 100,100 75,75 75,25" fill={getColorCara(`${pieza}-right`)} stroke="#475569" strokeWidth="3" onClick={() => handleClicIzquierdo(pieza, 'right')} onContextMenu={e => handleClicDerecho(e, pieza, 'right')} />
+        <polygon points="0,100 100,100 75,75 25,75" fill={getColorCara(`${pieza}-bottom`)} stroke="#475569" strokeWidth="3" onClick={() => handleClicIzquierdo(pieza, 'bottom')} onContextMenu={e => handleClicDerecho(e, pieza, 'bottom')} />
+        <polygon points="0,0 25,25 25,75 0,100" fill={getColorCara(`${pieza}-left`)} stroke="#475569" strokeWidth="3" onClick={() => handleClicIzquierdo(pieza, 'left')} onContextMenu={e => handleClicDerecho(e, pieza, 'left')} />
+        <rect x="25" y="25" width="50" height="50" fill={getColorCara(`${pieza}-center`)} stroke="#475569" strokeWidth="3" onClick={() => handleClicIzquierdo(pieza, 'center')} onContextMenu={e => handleClicDerecho(e, pieza, 'center')} />
       </svg>
     </div>
   );
 
-  const docsFiltrados = documentos.filter(d => filtroEstudio === 'Todas' || d.categoria === filtroEstudio);
+  if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-slate-100 text-gray-800 flex flex-col justify-between">
+    <div className={`min-h-screen bg-slate-100 text-slate-800 flex flex-col justify-between ${config.tipoTipografia}`}>
       <style jsx global>{`
         @media print {
           @page { size: A4 portrait; margin: 0.8cm; }
           header, footer, .no-print { display: none !important; }
           body { background-color: white !important; padding: 0 !important; }
-          .print-area { box-shadow: none !important; border: none !important; width: 100% !important; }
         }
       `}</style>
 
-      <input type="file" ref={fileInputRef} onChange={handleSubirArchivo} className="hidden" accept="image/*,.pdf" />
+      {/* HEADER SUPERIOR UNIFICADO */}
+      <header className="bg-blue-600 text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 no-print">
+        <div className="flex flex-col">
+          <h1 className="text-2xl font-black tracking-tight leading-none">{config.nombreClinica || 'MeDent'}</h1>
+          <p className="text-[10px] uppercase font-bold text-blue-100 tracking-widest mt-0.5">CLÍNICA ODONTOLÓGICA — ODONTOGRAMA Y EXPEDIENTE</p>
+        </div>
 
-      {/* HEADER SUPERIOR */}
-      <header className="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center no-print">
-        <Link href="/" className="flex flex-col hover:opacity-90">
-          <h1 className="text-xl font-black">MeDent</h1>
-          <p className="text-[10px] uppercase font-bold text-blue-100">CLÍNICA ODONTOLÓGICA — ODONTOGRAMA DE 5 SECTORES</p>
-        </Link>
-        <div className="flex gap-2">
-          <Link href="/pacientes" className="bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs py-2 px-3 rounded-xl border border-blue-400">
-            👥 Volver a Lista de Pacientes
-          </Link>
-          <Link href="/dashboard" className="bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs py-2 px-3 rounded-xl border border-blue-400">
-            📊 Dashboard
-          </Link>
-          <Link href="/turnos" className="bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs py-2 px-3 rounded-xl border border-blue-400">
-            🗓️ Ir a la Agenda
-          </Link>
-          <Link href="/login" className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-sm">
-            🚪 Cerrar Sesión
-          </Link>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Link href="/pacientes" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3.5 rounded-xl border border-blue-400">Volver a Lista de Pacientes</Link>
+          <Link href="/dashboard" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3.5 rounded-xl border border-blue-400">📊 Dashboard</Link>
+          <Link href="/turnos" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3.5 rounded-xl border border-blue-400">📅 Ir a la Agenda</Link>
+          <Link href="/login" className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs py-2 px-3.5 rounded-xl shadow-sm">🚪 Cerrar Sesión</Link>
         </div>
       </header>
 
       {/* CONTENIDO PRINCIPAL */}
-      <main className="p-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
+      <main className="max-w-7xl mx-auto w-full px-6 py-6 flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        {/* COLUMNA IZQUIERDA: DATOS DEL PACIENTE SELECCIONADO */}
+        {/* PANEL IZQUIERDO: FICHA DEL PACIENTE */}
+        <div className="lg:col-span-1 space-y-4">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center gap-3 border-b pb-4">
+              <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-xl font-black shadow-md">
+                {paciente.nombre.split(' ').map(n => n[0]).join('')}
+              </div>
+              <div>
+                <h2 className="text-base font-black text-slate-900 leading-tight">{paciente.nombre}</h2>
+                <p className="text-xs font-extrabold text-slate-500">DNI: {paciente.dni}</p>
+              </div>
+            </div>
+            <div className="space-y-3 text-xs">
+              <div><span className="text-[10px] uppercase font-bold text-slate-400 block">Teléfono / WhatsApp</span><span className="font-extrabold text-slate-800">{paciente.telefono}</span></div>
+              <div><span className="text-[10px] uppercase font-bold text-slate-400 block">Email</span><span className="font-extrabold text-slate-800">{paciente.email}</span></div>
+              <div><span className="text-[10px] uppercase font-bold text-slate-400 block">Obra Social / Prepaga</span><span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 inline-block">{paciente.obraSocial}</span></div>
+            </div>
+          </div>
+        </div>
+
+        {/* PANEL DERECHO: NAVEGACIÓN */}
         <div className="lg:col-span-3 space-y-4">
-          {pacienteActivo && (
-            <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-200 space-y-4">
-              <div className="flex items-center space-x-3 border-b pb-3">
-                <div className="w-12 h-12 bg-blue-200 text-blue-900 font-black rounded-2xl flex items-center justify-center text-lg shadow-inner">
-                  {getIniciales(pacienteActivo.nombre, pacienteActivo.apellido)}
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-gray-900 leading-tight">
-                    {pacienteActivo.nombre} {pacienteActivo.apellido}
-                  </h3>
-                  <p className="text-[11px] text-gray-500 font-bold">DNI: {pacienteActivo.dni || 'Sin DNI'}</p>
+          
+          {/* BARRA DE PESTAÑAS */}
+          <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-2 no-print">
+            <div className="flex gap-2">
+              <button onClick={() => setPestanaActiva('odontograma')} className={`py-2.5 px-5 rounded-xl text-xs font-black transition-all ${pestanaActiva === 'odontograma' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>🦷 Odontograma Digital (5 Caras)</button>
+              <button onClick={() => setPestanaActiva('documentos')} className={`py-2.5 px-5 rounded-xl text-xs font-black transition-all ${pestanaActiva === 'documentos' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>📁 Estudios y Documentos ({documentos.length})</button>
+            </div>
+            {pestanaActiva === 'odontograma' ? (
+              <button onClick={() => window.print()} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs py-2.5 px-4 rounded-xl shadow-md transition-all">🖨️ Imprimir Odontograma (A4)</button>
+            ) : (
+              <button onClick={abrirModalSubida} className="bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-2.5 px-4 rounded-xl shadow-md transition-all">+ Subir Archivo</button>
+            )}
+          </div>
+
+          {/* VISTA 1: ESTUDIOS Y DOCUMENTOS */}
+          {pestanaActiva === 'documentos' && (
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+              <div>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Categorías y Sub-carpetas de Estudios</h3>
+                <div className="flex flex-wrap gap-2">
+                  {categoriasLista.map(cat => {
+                    const cant = cat === 'Todas' ? documentos.length : documentos.filter(d => d.categoria === cat).length;
+                    return (
+                      <button key={cat} onClick={() => setCategoriaSeleccionada(cat)} className={`py-2 px-4 rounded-xl text-xs font-black transition-all border ${categoriaSeleccionada === cat ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200'}`}>📁 {cat} <span className="ml-1 opacity-75">({cant})</span></button>
+                    );
+                  })}
                 </div>
               </div>
-
-              <div className="space-y-2 text-xs font-medium">
-                <div>
-                  <span className="text-gray-400 font-bold block text-[10px] uppercase">Teléfono</span>
-                  <p className="font-bold text-gray-900">{pacienteActivo.telefono || 'Sin datos'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-400 font-bold block text-[10px] uppercase">Email</span>
-                  <p className="font-medium text-gray-700 truncate">{pacienteActivo.email || 'Sin datos'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-400 font-bold block text-[10px] uppercase">Obra Social / Prepaga</span>
-                  <p className="font-bold text-gray-900">{pacienteActivo.obra_social || 'Particular'}</p>
-                </div>
+              <div className="border-t pt-4">
+                {documentosFiltrados.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-3xl space-y-2">
+                    <span className="text-3xl block">➕</span>
+                    <p className="text-xs font-bold text-slate-500">No hay documentos en la carpeta «{categoriaSeleccionada}»</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {documentosFiltrados.map(doc => (
+                      <div key={doc.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex justify-between items-start gap-3">
+                        <div className="flex gap-3 items-start overflow-hidden">
+                          <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center text-lg">{doc.tipo.includes('image') ? '🖼️' : '📄'}</div>
+                          <div className="space-y-0.5 overflow-hidden">
+                            <h5 className="text-xs font-black text-slate-900 truncate">{doc.nombre}</h5>
+                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block">{doc.categoria}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          {doc.url !== '#' && <a href={doc.url} target="_blank" rel="noreferrer" className="p-2 bg-white text-slate-700 rounded-lg border text-xs font-bold shadow-sm">👁️</a>}
+                          <button onClick={() => eliminarDocumento(doc.id)} className="p-2 bg-white text-red-600 rounded-lg border text-xs font-bold shadow-sm">🗑️</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
-        </div>
 
-        {/* COLUMNA DERECHA: ODONTOGRAMA Y ESTUDIOS */}
-        <div className="lg:col-span-9 bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-6 print-area">
-          <div className="border-b flex justify-between items-center pb-3 no-print">
-            <div className="flex space-x-6 text-sm font-bold text-gray-500">
-              <button
-                onClick={() => setPestanaActiva('odontograma')}
-                className={`pb-1 transition-all cursor-pointer flex items-center gap-1.5 ${
-                  pestanaActiva === 'odontograma' ? 'border-b-2 border-blue-600 text-blue-900 font-black' : 'hover:text-gray-800'
-                }`}
-              >
-                <span>🦷</span> Odontograma Digital (5 Caras)
-              </button>
-              <button
-                onClick={() => setPestanaActiva('estudios')}
-                className={`pb-1 transition-all cursor-pointer flex items-center gap-1.5 ${
-                  pestanaActiva === 'estudios' ? 'border-b-2 border-blue-600 text-blue-900 font-black' : 'hover:text-gray-800'
-                }`}
-              >
-                <span>📁</span> Estudios y Documentos ({documentos.length})
-              </button>
-            </div>
-
-            <button
-              onClick={() => window.print()}
-              className="bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-xs py-2 px-4 rounded-xl shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
-            >
-              <span>🖨️</span> Imprimir Odontograma (A4)
-            </button>
-          </div>
-
+          {/* VISTA 2: ODONTOGRAMA DIGITAL */}
           {pestanaActiva === 'odontograma' && (
-            <div className="space-y-5">
-              <div className="flex flex-col space-y-3 bg-slate-50 p-4 rounded-2xl border border-gray-200 no-print">
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+              
+              {/* Controles del Odontograma */}
+              <div className="flex flex-col space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 no-print">
                 <div className="flex flex-wrap justify-between items-center gap-2 border-b pb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-gray-500 uppercase">Dentadura:</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase">Dentadura:</span>
                     <div className="flex bg-white p-1 rounded-xl border border-slate-200">
-                      <button onClick={() => setTipoDentadura('adulta')} className={`text-xs font-black px-3 py-1 rounded-lg ${tipoDentadura === 'adulta' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600'}`}>Adulta</button>
-                      <button onClick={() => setTipoDentadura('primaria')} className={`text-xs font-black px-3 py-1 rounded-lg ${tipoDentadura === 'primaria' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600'}`}>Primaria</button>
-                      <button onClick={() => setTipoDentadura('mixta')} className={`text-xs font-black px-3 py-1 rounded-lg ${tipoDentadura === 'mixta' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600'}`}>Mixta</button>
+                      <button onClick={() => setTipoDentadura('adulta')} className={`text-xs font-black px-3 py-1 rounded-lg ${tipoDentadura === 'adulta' ? 'bg-blue-600 text-white' : 'text-slate-600'}`}>Adulta</button>
+                      <button onClick={() => setTipoDentadura('primaria')} className={`text-xs font-black px-3 py-1 rounded-lg ${tipoDentadura === 'primaria' ? 'bg-blue-600 text-white' : 'text-slate-600'}`}>Primaria</button>
+                      <button onClick={() => setTipoDentadura('mixta')} className={`text-xs font-black px-3 py-1 rounded-lg ${tipoDentadura === 'mixta' ? 'bg-blue-600 text-white' : 'text-slate-600'}`}>Mixta</button>
                     </div>
                   </div>
-                  <button onClick={limpiarOdontogramaCompleto} className="bg-red-50 text-red-600 border border-red-200 font-extrabold text-xs py-1.5 px-3 rounded-xl cursor-pointer">🗑️ Limpiar Todo</button>
+                  <button onClick={limpiarOdontograma} className="bg-red-50 text-red-600 border border-red-200 font-extrabold text-xs py-1.5 px-3 rounded-xl cursor-pointer">🗑️ Limpiar Todo</button>
                 </div>
 
                 <div className="space-y-2">
-                  <div>
-                    <span className="text-[10px] font-black text-gray-500 uppercase block mb-1.5">
-                      Selecciona Estado a Aplicar:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 text-xs font-black">
-                      <button onClick={() => setHerramientaActiva('caries')} className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${herramientaActiva === 'caries' ? 'bg-rose-600 text-white ring-2 ring-rose-400' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>🔴 Caries</button>
-                      <button onClick={() => setHerramientaActiva('obturado')} className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${herramientaActiva === 'obturado' ? 'bg-blue-600 text-white ring-2 ring-blue-400' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>🔵 Obturado</button>
-                      <button onClick={() => setHerramientaActiva('endodoncia')} className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${herramientaActiva === 'endodoncia' ? 'bg-purple-600 text-white ring-2 ring-purple-400' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>🟣 Endodoncia</button>
-                      <button onClick={() => setHerramientaActiva('corona')} className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${herramientaActiva === 'corona' ? 'bg-amber-600 text-white ring-2 ring-amber-400' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>🟠 Corona</button>
-                      <button onClick={() => setHerramientaActiva('ausente')} className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${herramientaActiva === 'ausente' ? 'bg-gray-700 text-white ring-2 ring-gray-400' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>⚪ Ausente</button>
-                    </div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase block mb-1">Estado a Aplicar:</span>
+                  <div className="flex flex-wrap gap-1.5 text-xs font-black">
+                    <button onClick={() => setHerramientaActiva('caries')} className={`px-3 py-1.5 rounded-xl border cursor-pointer ${herramientaActiva === 'caries' ? 'bg-rose-600 text-white' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>🔴 Caries</button>
+                    <button onClick={() => setHerramientaActiva('obturado')} className={`px-3 py-1.5 rounded-xl border cursor-pointer ${herramientaActiva === 'obturado' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>🔵 Obturado</button>
+                    <button onClick={() => setHerramientaActiva('endodoncia')} className={`px-3 py-1.5 rounded-xl border cursor-pointer ${herramientaActiva === 'endodoncia' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>🟣 Endodoncia</button>
+                    <button onClick={() => setHerramientaActiva('corona')} className={`px-3 py-1.5 rounded-xl border cursor-pointer ${herramientaActiva === 'corona' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>🟠 Corona</button>
+                    <button onClick={() => setHerramientaActiva('ausente')} className={`px-3 py-1.5 rounded-xl border cursor-pointer ${herramientaActiva === 'ausente' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700'}`}>⚪ Ausente</button>
                   </div>
-
-                  {/* INDICADOR OPTIMIZADO: MÁS COMPACTO Y EN SU PROPIA LÍNEA */}
-                  <div className="inline-block bg-blue-50 border border-blue-200 text-blue-900 text-[10px] px-2.5 py-1 rounded-lg font-bold">
-                    💡 <b>Clic Izq:</b> Aplicar color | <b>Clic Der:</b> Borrar sector
+                  <div className="inline-block bg-blue-50 text-blue-900 text-[10px] px-2.5 py-1 rounded-lg font-bold border border-blue-200">
+                    💡 Clic Izq: Aplicar color | Clic Der: Borrar sector
                   </div>
                 </div>
               </div>
 
-              {/* GRILLA DENTARIA */}
-              <div className="space-y-4 overflow-x-auto p-4 bg-white rounded-2xl border border-gray-200 shadow-inner">
+              {/* Grilla Dental */}
+              <div className="overflow-x-auto p-4 bg-white rounded-2xl border border-slate-200 shadow-inner">
                 {(tipoDentadura === 'adulta' || tipoDentadura === 'mixta') && (
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block text-center">MAXILAR SUPERIOR</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-center">MAXILAR SUPERIOR</span>
                       <div className="flex justify-center items-center gap-1 sm:gap-1.5">
                         <div className="flex gap-1">{adultaSupCuad1.map(p => <DienteGeometriaSVG key={p} pieza={p} />)}</div>
                         <div className="w-0.5 h-10 bg-slate-400 mx-1" />
@@ -400,14 +379,13 @@ function ContenidoFichaPaciente() {
                         <div className="w-0.5 h-10 bg-slate-400 mx-1" />
                         <div className="flex gap-1">{adultaInfCuad3.map(p => <DienteGeometriaSVG key={p} pieza={p} />)}</div>
                       </div>
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block text-center pt-1">MAXILAR INFERIOR</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-center pt-1">MAXILAR INFERIOR</span>
                     </div>
                   </div>
                 )}
-
                 {(tipoDentadura === 'primaria' || tipoDentadura === 'mixta') && (
-                  <div className="space-y-4 pt-4 border-t">
-                    <span className="text-xs font-black text-purple-900 block text-center uppercase">Dentición Temporal / Decidua</span>
+                  <div className="space-y-4 pt-4 border-t mt-4">
+                    <span className="text-xs font-black text-purple-900 block text-center uppercase">Dentición Temporal</span>
                     <div className="flex justify-center items-center gap-1 sm:gap-1.5">
                       <div className="flex gap-1">{primariaSupCuad5.map(p => <DienteGeometriaSVG key={p} pieza={p} />)}</div>
                       <div className="w-0.5 h-10 bg-purple-400 mx-1" />
@@ -421,72 +399,46 @@ function ContenidoFichaPaciente() {
                   </div>
                 )}
               </div>
-
-              {/* HISTORIAL */}
-              <div className="space-y-2 border-t pt-4">
-                <h4 className="text-xs font-black text-gray-700 uppercase">HISTORIAL ODONTOLÓGICO DE CARAS COLOREADAS</h4>
-                {registrosDentales.length === 0 ? (
-                  <div className="text-center py-5 text-xs text-gray-400 bg-slate-50 rounded-2xl border border-dashed">
-                    Haz clic izquierdo en cualquier sector dental para colorear. Usa clic derecho sobre una cara para desmarcar.
-                  </div>
-                ) : (
-                  <div className="divide-y text-xs border rounded-2xl overflow-hidden bg-white max-h-44 overflow-y-auto">
-                    {registrosDentales.map(r => (
-                      <div key={r.id} className="p-2.5 flex justify-between items-center hover:bg-slate-50">
-                        <div>
-                          <span className="font-black text-blue-900">Pieza #{r.pieza} (Cara {r.cara}):</span>{' '}
-                          <span className="font-bold text-gray-800">{r.estado}</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-gray-400 bg-slate-100 px-2 py-1 rounded-lg">{r.fecha}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           )}
 
-          {pestanaActiva === 'estudios' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center border-b pb-3">
-                <h3 className="text-sm font-black text-gray-900">Estudios y Documentos Clínicos</h3>
-                <button onClick={() => fileInputRef.current?.click()} className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-2 px-4 rounded-xl cursor-pointer">+ Subir Archivo</button>
-              </div>
-
-              {docsFiltrados.length === 0 ? (
-                <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-gray-200 rounded-3xl p-12 text-center space-y-3 cursor-pointer">
-                  <div className="text-2xl">➕</div>
-                  <h4 className="text-xs font-black text-gray-700">No hay documentos cargados en la carpeta «{filtroEstudio}»</h4>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {docsFiltrados.map(doc => (
-                    <div key={doc.id} className="bg-slate-50 border p-4 rounded-2xl space-y-2">
-                      <p className="text-xs font-bold text-blue-950 truncate">{doc.nombre}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </main>
 
-      <footer className="py-4 text-center text-xs text-gray-400 border-t bg-white no-print">
-        MeDent SaaS Odontológico — Ficha Odontológica Individual
+      {/* MODAL SUBIDA */}
+      {modalSubir && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
+          <div className="bg-white max-w-md w-full p-6 rounded-3xl shadow-2xl space-y-4">
+            <h3 className="text-sm font-black text-slate-900 border-b pb-3">Subir Estudio</h3>
+            <form onSubmit={guardarDocumento} className="space-y-4">
+              <input type="text" required value={nombreArchivo} onChange={e => setNombreArchivo(e.target.value)} placeholder="Nombre del estudio" className="w-full text-xs font-bold border rounded-xl p-3 bg-slate-50 outline-none" />
+              <select value={catSubida} onChange={e => setCatSubida(e.target.value as any)} className="w-full text-xs font-bold border rounded-xl p-3 bg-slate-50 outline-none">
+                <option value="Pre-quirúrgicos">Pre-quirúrgicos</option>
+                <option value="Pantomografías / Radiografías">Pantomografías / Radiografías</option>
+                <option value="Fotografías e Imágenes">Fotografías e Imágenes</option>
+                <option value="Informes y Consentimientos">Informes y Consentimientos</option>
+              </select>
+              <input type="file" onChange={e => setArchivoTemp(e.target.files?.[0] || null)} className="w-full text-xs font-bold border rounded-xl p-2.5 bg-slate-50" />
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setModalSubir(false)} className="text-xs font-bold text-slate-500 px-4 py-2.5 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-5 py-2.5 rounded-xl shadow-md">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <footer className="bg-white py-4 border-t text-center text-[10px] text-slate-400 no-print">
+        {config.nombreClinica} SaaS Odontológico — Ficha Odontológica Individual
       </footer>
     </div>
   );
 }
 
-export default function FichaPacienteSeleccionadoPage() {
+export default function FichaPacientePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center text-xs font-bold text-blue-600 animate-pulse">
-        Cargando Ficha del Paciente...
-      </div>
-    }>
-      <ContenidoFichaPaciente />
+    <Suspense fallback={<div className="p-6 text-center text-xs font-bold">Cargando expediente...</div>}>
+      <FichaPacienteContent />
     </Suspense>
   );
 }
