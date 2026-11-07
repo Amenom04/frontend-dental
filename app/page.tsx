@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useConfig } from '../context/ConfigContext';
 import { useState, useEffect } from 'react';
 
-export default function HomePage() {
+export default function LandingPage() {
   const { config } = useConfig();
   const [mounted, setMounted] = useState(false);
 
@@ -12,10 +12,12 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
+  // Evitamos errores de hidratación en Vercel
   if (!mounted) return null;
 
   return (
-    <div className={`min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between relative overflow-hidden ${config.tipoTipografia}`}>
+    // Aplicamos dinámicamente la tipografía desde el contexto a toda la página
+    <div className={`min-h-screen bg-slate-50 text-slate-900 flex flex-col relative overflow-hidden ${config.tipoTipografia}`}>
       
       {/* 🖼️ IMAGEN 1: HERO SUPERIOR DERECHA */}
       {config.imagenFondoHeroUrl && (
@@ -84,108 +86,114 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 🔹 HEADER PUBLICO */}
-      <header className="bg-white/90 backdrop-blur-md border-b sticky top-0 z-30 shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            {config.logoUrl ? (
-              <img src={config.logoUrl} alt="Logo Clinica" className="h-10 w-auto object-contain" />
-            ) : (
-              <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-md">
-                M
-              </div>
-            )}
-            <div>
-              <h1 className="text-xl font-black text-slate-900 leading-none">{config.nombreClinica}</h1>
-              <p className="text-[10px] font-extrabold uppercase text-blue-600 tracking-wider mt-0.5">SISTEMA ODONTOLÓGICO INTEGRAL</p>
-            </div>
+      {/* HEADER ALINEADO A LA CONFIGURACIÓN */}
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
+        <div className="flex items-center gap-3">
+          {config.logoUrl ? (
+            <img src={config.logoUrl} alt="Logo Clínica" className="h-8 object-contain" />
+          ) : (
+            <span className="text-3xl">🦷</span>
+          )}
+          <div className="flex flex-col">
+            <h1 className="text-xl font-black text-blue-900 leading-tight">
+              {config.nombreClinica || 'MeDent Clínica Odontológica'}
+            </h1>
+            <span className="text-[10px] uppercase font-bold text-blue-500 tracking-widest">
+              Sistema Odontológico Integral
+            </span>
           </div>
-
-          <div className="flex items-center gap-3">
-            <Link href="/solicitar-turno" className="bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-2.5 px-5 rounded-xl shadow-md transition-all hover:scale-105">
-              Reservar Cita
-            </Link>
-            <Link href="/login" className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 px-4 rounded-xl transition-colors">
-              Acceso Staff
-            </Link>
-          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <Link href="/solicitar-turno" className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-2 px-5 rounded-full transition-colors shadow-sm">
+            Reservar Cita
+          </Link>
+          <Link href="/login" className="text-slate-500 hover:text-blue-600 font-bold text-sm bg-slate-50 hover:bg-blue-50 border border-slate-200 py-2 px-5 rounded-full transition-colors">
+            Acceso Staff
+          </Link>
         </div>
       </header>
 
-      {/* 🔹 HERO PRINCIPAL */}
-      <main className="max-w-5xl mx-auto px-6 py-16 space-y-16 relative z-10 w-full flex-1">
-        <div className="text-center space-y-6 max-w-3xl mx-auto">
-          <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-            Cuidamos tu sonrisa con la mejor tecnología
+      {/* HERO SECTION */}
+      <main className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20 relative z-10">
+        
+        {/* Contenedor de textos con fondo translúcido para asegurar legibilidad si hay fotos detrás */}
+        <div className="bg-white/60 backdrop-blur-md p-6 rounded-3xl inline-block mb-10 shadow-sm border border-white/50">
+          <h2 className="text-4xl md:text-5xl font-black text-slate-900 max-w-3xl leading-tight mb-4">
+            Cuidamos tu sonrisa con la <br className="hidden md:block"/> mejor tecnología
           </h2>
-          <p className="text-base text-slate-600 font-medium leading-relaxed">
+          <p className="text-slate-700 max-w-2xl text-sm md:text-base font-bold mx-auto">
             Solicita tu cita de forma rápida, directa e inmediata desde nuestro canal público oficial.
           </p>
+        </div>
+        
+        <div className="flex flex-wrap justify-center gap-4 mb-20">
+          <Link href="/solicitar-turno" className="bg-blue-600 hover:bg-blue-700 text-white font-black text-base py-4 px-8 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+            Solicitar Turno Ahora →
+          </Link>
 
-          <div className="flex flex-wrap justify-center gap-4 pt-2">
-            <Link href="/solicitar-turno" className="bg-blue-600 hover:bg-blue-700 text-white font-black text-sm py-4 px-8 rounded-2xl shadow-lg transition-all hover:scale-105 flex items-center gap-2">
-              Solicitar Turno Ahora →
-            </Link>
-
-            {config.telefonoWhatsApp && (
-              <a 
-                href={`https://wa.me/${config.telefonoWhatsApp.replace(/\D/g, '')}`} 
-                target="_blank" 
-                rel="noreferrer"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm py-4 px-8 rounded-2xl shadow-lg transition-all hover:scale-105 flex items-center gap-2"
-              >
-                📱 Consultar por WhatsApp
-              </a>
-            )}
-          </div>
+          {/* Botón secundario directo a WhatsApp si está configurado */}
+          {config.telefonoWhatsApp && (
+            <a 
+              href={`https://wa.me/${config.telefonoWhatsApp.replace(/\D/g, '')}`} 
+              target="_blank" 
+              rel="noreferrer"
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-base py-4 px-8 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 flex items-center gap-2"
+            >
+              📱 Consultar por WhatsApp
+            </a>
+          )}
         </div>
 
-        {/* 🔹 NUEVA SECCIÓN: EXPERIENCIA DE DIAGNÓSTICO Y ATENCIÓN AL PACIENTE */}
-        <section className="bg-white/80 backdrop-blur-md rounded-3xl p-8 sm:p-12 border border-slate-200 shadow-xl space-y-8">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-black uppercase text-blue-600 tracking-widest bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+        {/* SECCIÓN DE TARJETAS (CARDS) */}
+        <div className="w-full max-w-5xl bg-white/95 backdrop-blur-md rounded-3xl p-10 md:p-14 shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-200 relative z-10">
+          <div className="mb-12">
+            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-widest border border-blue-100">
               Excelencia e Innovación Odontológica
             </span>
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-900">
+            <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-6">
               ¿Cómo es tu Primera Consulta de Diagnóstico?
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            <p className="text-slate-500 text-sm mt-3 font-medium">
               Diseñamos cada paso de tu visita para garantizar una experiencia cómoda, transparente y libre de estrés.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-            <div className="bg-slate-50/80 p-6 rounded-2xl border border-slate-200 space-y-3 hover:border-blue-300 transition-all">
-              <div className="w-12 h-12 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center text-xl font-black">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+            {/* Tarjeta 1 */}
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 hover:border-blue-200 transition-colors">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl mb-4 shadow-sm border border-blue-200">
                 🩺
               </div>
-              <h4 className="text-base font-black text-slate-900">1. Evaluación Integral</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <h4 className="text-base font-black text-slate-900 mb-2">1. Evaluación Integral</h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-medium">
                 Realizamos un examen clínico exhaustivo con apoyo de radiografía panorámica digital para diagnosticar el estado general de tu boca de forma objetiva y precisa.
               </p>
             </div>
 
-            <div className="bg-slate-50/80 p-6 rounded-2xl border border-slate-200 space-y-3 hover:border-blue-300 transition-all">
-              <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center text-xl font-black">
+            {/* Tarjeta 2 */}
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 hover:border-amber-200 transition-colors">
+              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-xl mb-4 shadow-sm border border-amber-200">
                 🤝
               </div>
-              <h4 className="text-base font-black text-slate-900">2. Trato Humano y Humildad</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <h4 className="text-base font-black text-slate-900 mb-2">2. Trato Humano y Humildad</h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-medium">
                 Nuestro personal médico y administrativo está capacitado para escucharte activamente, resolver tus dudas sin modismos complejos y acompañarte en todo momento.
               </p>
             </div>
 
-            <div className="bg-slate-50/80 p-6 rounded-2xl border border-slate-200 space-y-3 hover:border-blue-300 transition-all">
-              <div className="w-12 h-12 bg-purple-100 text-purple-700 rounded-xl flex items-center justify-center text-xl font-black">
+            {/* Tarjeta 3 */}
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 hover:border-rose-200 transition-colors">
+              <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center text-xl mb-4 shadow-sm border border-rose-200">
                 📋
               </div>
-              <h4 className="text-base font-black text-slate-900">3. Plan Personalizado</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <h4 className="text-base font-black text-slate-900 mb-2">3. Plan Personalizado</h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-medium">
                 Te entregamos un presupuesto claro y detallado antes de iniciar cualquier tratamiento, priorizando siempre tu salud, tu confort y tu presupuesto.
               </p>
             </div>
           </div>
-        </section>
+        </div>
       </main>
 
       {/* 🔹 BOTÓN FLOTANTE DE WHATSAPP */}
@@ -203,8 +211,8 @@ export default function HomePage() {
         </a>
       )}
 
-      <footer className="bg-white border-t py-6 text-center text-xs text-slate-400 relative z-10">
-        {config.nombreClinica} — Sistema Integral de Agenda Odontológica
+      <footer className="bg-white/90 backdrop-blur-md py-6 border-t border-slate-200 text-center text-[10px] text-slate-400 relative z-10">
+        {config.nombreClinica || 'MeDent'} — Sistema Integral de Agenda Odontológica
       </footer>
     </div>
   );
