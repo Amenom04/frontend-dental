@@ -237,7 +237,6 @@ export default function AgendaInternaPage() {
     if (docObj) setManualEsp(docObj.especialidad);
   };
 
-  // Función para enviar WhatsApp directo al paciente
   const enviarWhatsAppConfirmacion = (turno: Turno) => {
     const numLimpio = (turno.telefono || '').replace(/\D/g, '');
     if (!numLimpio) {
@@ -246,13 +245,13 @@ export default function AgendaInternaPage() {
     }
 
     const textoWA =
-      `*Confirmación de Turno — ${config.nombreClinica || 'MeDent'}* 🩺\n\n` +
+      `*Confirmación de Turno — ${config?.nombreClinica || 'MeDent'}* 🩺\n\n` +
       `Estimado/a *${turno.paciente_nombre}*,\n` +
       `Le confirmamos su cita agendada para el tratamiento de *${turno.motivo || 'Consulta Odontológica'}*.\n\n` +
       `👨‍⚕️ *Profesional:* ${turno.profesional || 'Odontología General'}\n` +
       `📅 *Fecha:* ${turno.fecha_arg || turno.fecha}\n` +
       `⏰ *Hora:* ${turno.hora} hs\n` +
-      `📍 *Ubicación:* ${config.direccion || 'Consultorio MeDent'}\n\n` +
+      `📍 *Ubicación:* ${config?.direccion || 'Consultorio MeDent'}\n\n` +
       `Ante cualquier consulta estamos a su disposición. ¡Le esperamos!`;
 
     const url = `https://wa.me/${numLimpio}?text=${encodeURIComponent(textoWA)}`;
@@ -296,10 +295,7 @@ export default function AgendaInternaPage() {
     } finally {
       setMostrarModalManual(false);
       setTurnoIdAReprogramar(null);
-
-      // Lanzar WhatsApp de confirmación
       enviarWhatsAppConfirmacion(nuevoObj);
-
       setManualNombre('');
       setManualDni('');
       setManualTelefono('');
@@ -356,7 +352,7 @@ export default function AgendaInternaPage() {
   });
 
   return (
-    <div className={`min-h-screen bg-slate-100 text-gray-800 flex flex-col justify-between ${config.tipoTipografia}`}>
+    <div className={`min-h-screen bg-slate-100 text-gray-800 flex flex-col justify-between ${config?.tipoTipografia || ''}`}>
       <style jsx global>{`
         @media print {
           @page { size: portrait; margin: 1cm; }
@@ -366,10 +362,10 @@ export default function AgendaInternaPage() {
         }
       `}</style>
 
-      {/* HEADER SUPERIOR */}
+      {/* HEADER SUPERIOR UNIFICADO */}
       <header className="bg-blue-600 text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 no-print">
         <Link href="/" className="flex flex-col hover:opacity-90 transition-opacity cursor-pointer">
-          <h1 className="text-2xl font-black tracking-tight leading-none">{config.nombreClinica || 'MeDent'}</h1>
+          <h1 className="text-2xl font-black tracking-tight leading-none">{config?.nombreClinica || 'MeDent'}</h1>
           <p className="text-[10px] uppercase font-bold text-blue-100 tracking-widest mt-0.5">
             CLÍNICA ODONTOLÓGICA — AGENDA INTERNA DE CONTROL
           </p>
@@ -397,16 +393,24 @@ export default function AgendaInternaPage() {
             🖨️ Imprimir Agenda
           </button>
 
+          <Link href="/dashboard" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
+            📊 Dashboard
+          </Link>
+
           <Link href="/pacientes" className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-2 px-3 rounded-xl shadow-sm transition-colors">
-            👥 Historias Clínicas
+            👥 Historias
           </Link>
 
           <Link href="/configuracion" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
-            ⚙️ Configuración
+            ⚙️ Config
           </Link>
 
           <Link href="/" className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-slate-700 transition-colors">
             🏠 Inicio
+          </Link>
+
+          <Link href="/login" className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs py-2 px-3 rounded-xl shadow-sm transition-colors">
+            🚪 Salir
           </Link>
         </div>
       </header>
@@ -619,7 +623,7 @@ export default function AgendaInternaPage() {
 
             <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
               <button onClick={() => setModoVista('dia')} className={`text-xs font-black px-3 py-1 rounded-xl transition-all ${modoVista === 'dia' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>Día</button>
-              <button onClick={() => setModoVista('semana')} className={`text-xs font-black px-3 py-1 rounded-xl transition-all ${modoVista === 'semana' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>Semana (30m)</button>
+              <button onClick={() => setModoVista('semana')} className={`text-xs font-black px-3 py-1 rounded-xl transition-all ${modoVista === 'semana' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>Semana</button>
               <button onClick={() => setModoVista('mes')} className={`text-xs font-black px-3 py-1 rounded-xl transition-all ${modoVista === 'mes' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>Mes</button>
             </div>
           </div>
@@ -634,7 +638,7 @@ export default function AgendaInternaPage() {
             <div className="flex items-center gap-3">
               {cargando && <span className="text-xs font-bold text-blue-600 animate-pulse no-print">Sincronizando...</span>}
               <span className="text-xs font-black text-blue-900 bg-blue-100 px-3 py-1 rounded-xl">
-                {turnosFiltrados.length} Turno(s) Coincidente(s)
+                {turnosFiltrados.length} Turnos
               </span>
             </div>
           </div>
@@ -855,57 +859,8 @@ export default function AgendaInternaPage() {
       </main>
 
       <footer className="py-4 text-center text-xs text-gray-400 border-t bg-white mt-6 no-print">
-        {config.nombreClinica || 'MeDent'} SaaS Odontológico — Sistema Integral de Agenda e Historias Clínicas
+        {config?.nombreClinica || 'MeDent'} SaaS Odontológico — Sistema Integral de Agenda e Historias Clínicas
       </footer>
     </div>
   );
 }
-
-{/* HEADER SUPERIOR UNIFICADO CON DASHBOARD Y CERRAR SESIÓN */}
-<header className="bg-blue-600 text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 no-print">
-  <Link href="/" className="flex flex-col hover:opacity-90 transition-opacity cursor-pointer">
-    <h1 className="text-2xl font-black tracking-tight leading-none">{config.nombreClinica || 'MeDent'}</h1>
-    <p className="text-[10px] uppercase font-bold text-blue-100 tracking-widest mt-0.5">
-      CLÍNICA ODONTOLÓGICA — AGENDA INTERNA DE CONTROL
-    </p>
-  </Link>
-
-  <div className="flex flex-wrap gap-2 items-center">
-    <button
-      onClick={() => { setTurnoIdAReprogramar(null); setMostrarModalManual(true); }}
-      className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 shadow-sm transition-colors cursor-pointer"
-    >
-      + Agendar Turno Manual
-    </button>
-
-    <button
-      onClick={cargarTurnos}
-      className="bg-blue-700 hover:bg-blue-800 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors cursor-pointer"
-    >
-      🔄 Actualizar
-    </button>
-
-    <button
-      onClick={() => window.print()}
-      className="bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-indigo-400 shadow-sm transition-colors cursor-pointer"
-    >
-      🖨️ Imprimir Agenda
-    </button>
-
-    <Link href="/dashboard" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
-      📊 Dashboard
-    </Link>
-
-    <Link href="/configuracion" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
-      ⚙️ Configuración
-    </Link>
-
-    <Link href="/" className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-slate-700 transition-colors">
-      🏠 Inicio
-    </Link>
-
-    <Link href="/login" className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs py-2 px-3 rounded-xl shadow-sm transition-colors">
-      🚪 Cerrar Sesión
-    </Link>
-  </div>
-</header>

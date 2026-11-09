@@ -595,3 +595,27 @@ export default function ConfiguracionPage() {
     </div>
   );
 }
+
+{/* CAMPOS DE CREDENCIALES (NUEVO) */}
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 mt-2 border-t border-gray-100">
+  <div>
+    <label className="block text-[11px] font-bold text-gray-600 mb-1 uppercase tracking-wider">
+      👤 Usuario de Acceso
+    </label>
+    <input 
+      type="text" 
+      placeholder="Ej. smartinez" 
+      className="w-full text-xs border border-gray-200 rounded-xl p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" 
+    />
+  </div>
+  <div>
+    <label className="block text-[11px] font-bold text-gray-600 mb-1 uppercase tracking-wider">
+      🔑 Contraseña Temporal
+    </label>
+    <input 
+      type="password" 
+      placeholder="••••••••" 
+      className="w-full text-xs border border-gray-200 rounded-xl p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" 
+    />
+  </div>
+</div>

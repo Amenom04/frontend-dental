@@ -20,6 +20,9 @@ export default function SolicitarTurnoPublicoPage() {
   const [fecha, setFecha] = useState('');
   const [horaSeleccionada, setHoraSeleccionada] = useState('');
   const [motivo, setMotivo] = useState('');
+  
+  // NUEVO ESTADO PARA LA FECHA MÍNIMA
+  const [minDate, setMinDate] = useState('');
 
   const [horariosDisponibles, setHorariosDisponibles] = useState<string[]>([]);
   const [errorSimultaneo, setErrorSimultaneo] = useState('');
@@ -27,6 +30,11 @@ export default function SolicitarTurnoPublicoPage() {
   const [cargando, setCargando] = useState(false);
 
   const HORARIOS_BASE = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
+
+  // NUEVO USE-EFFECT PARA CARGAR LA FECHA MÍNIMA SOLO EN EL CLIENTE
+  useEffect(() => {
+    setMinDate(new Date().toISOString().split('T')[0]);
+  }, []);
 
   const cargarDisponibilidad = async (fechaSeleccionada: string) => {
     try {
@@ -77,9 +85,8 @@ export default function SolicitarTurnoPublicoPage() {
       const data = await res.json();
 
       if (res.status === 409) {
-        // MENSAJE DIRECTO DE RESERVA SIMULTÁNEA
         setErrorSimultaneo('⚠️ Horario no disponible. Por favor, seleccione otro horario.');
-        await cargarDisponibilidad(fecha); // Actualiza la grilla al instante
+        await cargarDisponibilidad(fecha);
       } else if (res.ok) {
         setTurnoConfirmado(data);
       }
@@ -221,7 +228,7 @@ export default function SolicitarTurnoPublicoPage() {
                 type="date"
                 required
                 value={fecha}
-                min={new Date().toISOString().split('T')[0]}
+                min={minDate}
                 onChange={(e) => setFecha(e.target.value)}
                 className="w-full text-xs border border-gray-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 font-bold"
               />

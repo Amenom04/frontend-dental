@@ -1,218 +1,249 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useConfig } from '../context/ConfigContext';
-import { useState, useEffect } from 'react';
+import { useConfig } from '@/context/ConfigContext';
 
 export default function LandingPage() {
-  const { config } = useConfig();
+  const { config, practicas } = useConfig();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Evitamos errores de hidratación en Vercel
   if (!mounted) return null;
 
+  const mensajeWA = encodeURIComponent(config.whatsappMensaje || 'Hola! Quisiera realizar una consulta.');
+  const urlWhatsApp = `https://wa.me/${config.whatsappNumero || '5493511234567'}?text=${mensajeWA}`;
+
   return (
-    // Aplicamos dinámicamente la tipografía desde el contexto a toda la página
-    <div className={`min-h-screen bg-slate-50 text-slate-900 flex flex-col relative overflow-hidden ${config.tipoTipografia}`}>
-      
-      {/* 🖼️ IMAGEN 1: HERO SUPERIOR DERECHA */}
-      {config.imagenFondoHeroUrl && (
-        <div 
-          className="absolute z-0 pointer-events-none transition-all duration-300"
+    <div
+      className={`min-h-screen relative flex flex-col justify-between overflow-hidden ${config.tipoTipografia}`}
+      style={{ backgroundColor: config.colorFondo || '#f8fafc' }}
+    >
+      {/* 🖼️ FOTO 1: SUPERIOR DERECHA (HERO) CON DESPLAZAMIENTO Y TAMAÑO DINÁMICO */}
+      {config.fondoFoto1Url && (
+        <div
+          className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-right-top transition-all"
           style={{
-            top: `${config.imagenHeroTop}%`,
-            right: `${config.imagenHeroRight}%`,
-            width: `${config.imagenHeroScale}px`,
-            height: `${config.imagenHeroScale}px`,
-            opacity: config.imagenHeroOpacidad / 100
+            backgroundImage: `url(${config.fondoFoto1Url})`,
+            opacity: config.fondoOpacidad ?? 0.15,
+            width: `${config.foto1Tamano || 420}px`,
+            height: `${config.foto1Tamano || 420}px`,
+            top: `${config.foto1PosY ?? 80}px`,
+            right: `${config.foto1PosX ?? 0}px`
           }}
-        >
-          <img 
-            src={config.imagenFondoHeroUrl} 
-            alt="Hero Background" 
-            className="w-full h-full object-cover rounded-3xl shadow-xl"
-          />
-        </div>
+        />
       )}
 
-      {/* 🖼️ IMAGEN 2: SECCIÓN DIAGNÓSTICO / EXPERIENCIA (CENTRO IZQUIERDA) */}
-      {config.imagenFondoServiciosUrl && (
-        <div 
-          className="absolute z-0 pointer-events-none transition-all duration-300"
+      {/* 🖼️ FOTO 2: CENTRAL IZQUIERDA (SERVICIOS) */}
+      {config.fondoFoto2Url && (
+        <div
+          className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-left-center transition-all -translate-y-1/2"
           style={{
-            top: `${config.imagenServiciosTop}%`,
-            left: `${config.imagenServiciosLeft}%`,
-            width: `${config.imagenServiciosScale}px`,
-            height: `${config.imagenServiciosScale}px`,
-            opacity: config.imagenServiciosOpacidad / 100
+            backgroundImage: `url(${config.fondoFoto2Url})`,
+            opacity: config.fondoOpacidad ?? 0.15,
+            width: `${config.foto2Tamano || 380}px`,
+            height: `${config.foto2Tamano || 380}px`,
+            top: `${config.foto2PosY ?? 50}%`,
+            left: `${config.foto2PosX ?? 0}px`
           }}
-        >
-          <img 
-            src={config.imagenFondoServiciosUrl} 
-            alt="Experiencia Background" 
-            className="w-full h-full object-cover rounded-3xl shadow-xl"
-          />
-        </div>
+        />
       )}
 
-      {/* 🖼️ IMAGEN 3: FOOTER INFERIOR DERECHA */}
-      {config.imagenFondoFooterUrl && (
-        <div 
-          className="absolute z-0 pointer-events-none transition-all duration-300"
+      {/* 🖼️ FOTO 3: INFERIOR DERECHA (FOOTER) */}
+      {config.fondoFoto3Url && (
+        <div
+          className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-right-bottom transition-all"
           style={{
-            bottom: `${config.imagenFooterBottom}%`,
-            right: `${config.imagenFooterRight}%`,
-            width: `${config.imagenFooterScale}px`,
-            height: `${config.imagenFooterScale}px`,
-            opacity: config.imagenFooterOpacidad / 100
+            backgroundImage: `url(${config.fondoFoto3Url})`,
+            opacity: config.fondoOpacidad ?? 0.15,
+            width: `${config.foto3Tamano || 380}px`,
+            height: `${config.foto3Tamano || 380}px`,
+            bottom: `${config.foto3PosY ?? 0}px`,
+            right: `${config.foto3PosX ?? 0}px`
           }}
+        />
+      )}
+
+      {/* BANNER PROMOCIONAL SUPERIOR */}
+      {config.bannerPromocional && (
+        <div
+          className="text-white text-xs font-black py-2.5 px-4 text-center tracking-wide shadow-inner z-20"
+          style={{ backgroundColor: config.colorPrimario || '#2563eb' }}
         >
-          <img 
-            src={config.imagenFondoFooterUrl} 
-            alt="Footer Background" 
-            className="w-full h-full object-cover rounded-3xl shadow-xl"
-          />
+          {config.bannerPromocional}
         </div>
       )}
 
-      {/* 📣 BANNER DE PROMOCIONES Y CUOTAS */}
-      {config.mostrarBannerCuotas && config.textoBannerCuotas && (
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-700 text-white text-center py-2.5 px-4 text-xs font-black tracking-wide shadow-inner relative z-20">
-          <span>{config.textoBannerCuotas}</span>
-        </div>
-      )}
+      {/* HEADER PRINCIPAL */}
+      <header className="bg-white/95 backdrop-blur-md border-b sticky top-0 z-40 shadow-sm">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+          
+          <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+            {config.logoUrl ? (
+              <img
+                src={config.logoUrl}
+                alt="Logo Clínica"
+                style={{ height: `${config.logoTamano || 45}px` }}
+                className="object-contain"
+              />
+            ) : (
+              <svg width="42" height="42" viewBox="0 0 100 100" className="fill-none flex-shrink-0">
+                <path
+                  d="M 50,22 C 38,12 20,15 20,38 C 20,60 25,70 38,90 C 42,80 38,60 48,50 L 52,68 L 68,42"
+                  stroke={config.colorPrimario || '#2563eb'}
+                  strokeWidth="7.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M 50,22 C 62,12 80,15 80,38 C 80,60 75,70 62,90 L 56,76"
+                  stroke="#1e293b"
+                  strokeWidth="7.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
 
-      {/* HEADER ALINEADO A LA CONFIGURACIÓN */}
-      <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-3">
-          {config.logoUrl ? (
-            <img src={config.logoUrl} alt="Logo Clínica" className="h-8 object-contain" />
-          ) : (
-            <span className="text-3xl">🦷</span>
-          )}
-          <div className="flex flex-col">
-            <h1 className="text-xl font-black text-blue-900 leading-tight">
-              {config.nombreClinica || 'MeDent Clínica Odontológica'}
-            </h1>
-            <span className="text-[10px] uppercase font-bold text-blue-500 tracking-widest">
-              Sistema Odontológico Integral
-            </span>
+            {config.mostrarNombreJuntoALogo && (
+              <div className="flex flex-col">
+                <span className="text-xl font-black text-slate-900 leading-tight">
+                  {config.nombreClinica || 'MeDent Clínica Odontológica'}
+                </span>
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                  Atención Odontológica Integral
+                </span>
+              </div>
+            )}
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/solicitar-turno"
+              className="text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md transition-all hover:scale-105"
+              style={{ backgroundColor: config.colorPrimario || '#2563eb' }}
+            >
+              📅 Reservar Cita en Línea
+            </Link>
+
+            <Link
+              href="/login"
+              className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors"
+            >
+              🔐 Acceso Staff
+            </Link>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <Link href="/solicitar-turno" className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-2 px-5 rounded-full transition-colors shadow-sm">
-            Reservar Cita
-          </Link>
-          <Link href="/login" className="text-slate-500 hover:text-blue-600 font-bold text-sm bg-slate-50 hover:bg-blue-50 border border-slate-200 py-2 px-5 rounded-full transition-colors">
-            Acceso Staff
-          </Link>
         </div>
       </header>
 
-      {/* HERO SECTION */}
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20 relative z-10">
+      {/* CONTENIDO PRINCIPAL DE LA LANDING PAGE */}
+      <main className="max-w-6xl mx-auto w-full px-6 py-12 space-y-16 z-10 flex-1 relative">
         
-        {/* Contenedor de textos con fondo translúcido para asegurar legibilidad si hay fotos detrás */}
-        <div className="bg-white/60 backdrop-blur-md p-6 rounded-3xl inline-block mb-10 shadow-sm border border-white/50">
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900 max-w-3xl leading-tight mb-4">
-            Cuidamos tu sonrisa con la <br className="hidden md:block"/> mejor tecnología
-          </h2>
-          <p className="text-slate-700 max-w-2xl text-sm md:text-base font-bold mx-auto">
+        {/* HERO */}
+        <section className="text-center space-y-6 max-w-3xl mx-auto">
+          <span
+            className="text-xs font-black px-4 py-1.5 rounded-full border shadow-sm inline-block uppercase tracking-wider"
+            style={{
+              color: config.colorPrimario || '#2563eb',
+              backgroundColor: '#ffffff',
+              borderColor: config.colorPrimario || '#2563eb'
+            }}
+          >
+            Tu Salud Dental en Manos Expertas
+          </span>
+
+          <h1 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+            Cuidamos tu sonrisa con la mejor tecnología
+          </h1>
+
+          <p className="text-base text-slate-600 font-medium leading-relaxed">
             Solicita tu cita de forma rápida, directa e inmediata desde nuestro canal público oficial.
           </p>
-        </div>
-        
-        <div className="flex flex-wrap justify-center gap-4 mb-20">
-          <Link href="/solicitar-turno" className="bg-blue-600 hover:bg-blue-700 text-white font-black text-base py-4 px-8 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-            Solicitar Turno Ahora →
-          </Link>
 
-          {/* Botón secundario directo a WhatsApp si está configurado */}
-          {config.telefonoWhatsApp && (
-            <a 
-              href={`https://wa.me/${config.telefonoWhatsApp.replace(/\D/g, '')}`} 
-              target="_blank" 
-              rel="noreferrer"
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-base py-4 px-8 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 flex items-center gap-2"
+          <div className="flex flex-wrap justify-center gap-4 pt-2">
+            <Link
+              href="/solicitar-turno"
+              className="text-white font-black text-sm px-8 py-4 rounded-2xl shadow-lg transition-all hover:scale-105"
+              style={{ backgroundColor: config.colorPrimario || '#2563eb' }}
+            >
+              Solicitar Turno Ahora →
+            </Link>
+
+            <a
+              href={urlWhatsApp}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm px-8 py-4 rounded-2xl shadow-lg transition-all hover:scale-105 flex items-center gap-2"
             >
               📱 Consultar por WhatsApp
             </a>
-          )}
-        </div>
-
-        {/* SECCIÓN DE TARJETAS (CARDS) */}
-        <div className="w-full max-w-5xl bg-white/95 backdrop-blur-md rounded-3xl p-10 md:p-14 shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-200 relative z-10">
-          <div className="mb-12">
-            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-widest border border-blue-100">
-              Excelencia e Innovación Odontológica
-            </span>
-            <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-6">
-              ¿Cómo es tu Primera Consulta de Diagnóstico?
-            </h3>
-            <p className="text-slate-500 text-sm mt-3 font-medium">
-              Diseñamos cada paso de tu visita para garantizar una experiencia cómoda, transparente y libre de estrés.
-            </p>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-            {/* Tarjeta 1 */}
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 hover:border-blue-200 transition-colors">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl mb-4 shadow-sm border border-blue-200">
-                🩺
+{/* SECCIÓN DE 3 TARJETAS INFORMATIVAS */}
+        <section className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* Tarjeta 1: Tratamientos */}
+            <div className="bg-white/90 backdrop-blur-sm p-6 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow flex flex-col space-y-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-2xl" style={{ backgroundColor: config.colorPrimario || '#2563eb' }}>
+                🦷
               </div>
-              <h4 className="text-base font-black text-slate-900 mb-2">1. Evaluación Integral</h4>
-              <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                Realizamos un examen clínico exhaustivo con apoyo de radiografía panorámica digital para diagnosticar el estado general de tu boca de forma objetiva y precisa.
+              <h3 className="text-lg font-black text-slate-900 leading-snug">Tratamientos Integrales</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Ofrecemos soluciones para cada necesidad: desde controles de rutina y limpiezas, hasta ortodoncia y cirugías complejas. Todo realizado con insumos de alta calidad.
               </p>
             </div>
 
-            {/* Tarjeta 2 */}
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 hover:border-amber-200 transition-colors">
-              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-xl mb-4 shadow-sm border border-amber-200">
+            {/* Tarjeta 2: Trato con el paciente */}
+            <div className="bg-white/90 backdrop-blur-sm p-6 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow flex flex-col space-y-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-2xl" style={{ backgroundColor: config.colorPrimario || '#2563eb' }}>
                 🤝
               </div>
-              <h4 className="text-base font-black text-slate-900 mb-2">2. Trato Humano y Humildad</h4>
-              <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                Nuestro personal médico y administrativo está capacitado para escucharte activamente, resolver tus dudas sin modismos complejos y acompañarte en todo momento.
+              <h3 className="text-lg font-black text-slate-900 leading-snug">Atención Cálida y Humana</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Sabemos que ir al odontólogo puede generar nervios. Te escuchamos, explicamos cada paso de tu tratamiento sin tecnicismos y respetamos tus tiempos.
               </p>
             </div>
 
-            {/* Tarjeta 3 */}
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 hover:border-rose-200 transition-colors">
-              <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center text-xl mb-4 shadow-sm border border-rose-200">
-                📋
+            {/* Tarjeta 3: Estándar Web (Tecnología y Seguimiento) */}
+            <div className="bg-white/90 backdrop-blur-sm p-6 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow flex flex-col space-y-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-2xl" style={{ backgroundColor: config.colorPrimario || '#2563eb' }}>
+                ⭐
               </div>
-              <h4 className="text-base font-black text-slate-900 mb-2">3. Plan Personalizado</h4>
-              <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                Te entregamos un presupuesto claro y detallado antes de iniciar cualquier tratamiento, priorizando siempre tu salud, tu confort y tu presupuesto.
+              <h3 className="text-lg font-black text-slate-900 leading-snug">Tecnología y Seguimiento</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Contamos con equipamiento moderno para diagnósticos precisos. Además, te acompañamos después de tu visita con recomendaciones para tu cuidado continuo.
               </p>
             </div>
+
           </div>
-        </div>
+        </section>
       </main>
 
-      {/* 🔹 BOTÓN FLOTANTE DE WHATSAPP */}
-      {config.telefonoWhatsApp && (
-        <a 
-          href={`https://wa.me/${config.telefonoWhatsApp.replace(/\D/g, '')}`}
+      {/* BOTÓN FLOTANTE WHATSAPP */}
+      {config.whatsappNumero && (
+        <a
+          href={urlWhatsApp}
           target="_blank"
-          rel="noreferrer"
-          className="fixed bottom-6 right-6 z-50 bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 flex items-center justify-center"
-          title="Contactar por WhatsApp"
+          rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 z-50 bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110"
+          title="Consultar por WhatsApp"
         >
-          <svg width="28" height="28" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
-          </svg>
+          <span className="text-2xl">📱</span>
         </a>
       )}
 
-      <footer className="bg-white/90 backdrop-blur-md py-6 border-t border-slate-200 text-center text-[10px] text-slate-400 relative z-10">
-        {config.nombreClinica || 'MeDent'} — Sistema Integral de Agenda Odontológica
+      {/* FOOTER */}
+      <footer className="bg-white/90 backdrop-blur-sm border-t py-8 text-center text-xs text-slate-500 space-y-2 z-10 relative">
+        <p className="font-bold text-slate-800">
+          {config.nombreClinica || 'MeDent Clínica Odontológica'} — {config.direccion || 'Atención Presencial'}
+        </p>
+        <p>Contacto Directo: {config.telefonoContacto || '03511234567'}</p>
+        <p className="text-[10px] text-slate-400">© 2026 Sistema Integral SaaS Odontológico</p>
       </footer>
     </div>
   );
