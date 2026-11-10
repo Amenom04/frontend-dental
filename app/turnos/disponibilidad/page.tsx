@@ -28,7 +28,7 @@ export default function DisponibilidadPacientesPage() {
 
   useEffect(() => {
     if (!fecha) return;
-    fetch(`http://localhost:4000/api/turnos?fecha=${fecha}`)
+    fetch(`[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/turnos?fecha=${fecha}`)
       .then(res => res.json())
       .then(data => setTurnosOcupados(data))
       .catch(console.error);

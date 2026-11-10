@@ -39,7 +39,7 @@ export default function ListaPacientesPage() {
 
   const cargarPacientes = () => {
     setCargando(true);
-    fetch('http://localhost:4000/api/pacientes')
+    fetch('[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/pacientes')
       .then(async res => res.ok ? await res.json() : [])
       .then(data => {
         if (Array.isArray(data)) setPacientes(data);
@@ -62,7 +62,7 @@ export default function ListaPacientesPage() {
 
     setGuardando(true);
     try {
-      const res = await fetch('http://localhost:4000/api/pacientes', {
+      const res = await fetch('[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/pacientes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

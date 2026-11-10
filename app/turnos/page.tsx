@@ -89,7 +89,7 @@ export default function AgendaInternaPage() {
     const turnosLocalesRaw = localStorage.getItem('medent_turnos_locales');
     const turnosLocales: Turno[] = turnosLocalesRaw ? JSON.parse(turnosLocalesRaw) : [];
 
-    fetch('http://localhost:4000/api/turnos', { cache: 'no-store' })
+    fetch('[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/turnos', { cache: 'no-store' })
       .then(res => res.ok ? res.json() : [])
       .then(data => {
         if (Array.isArray(data)) {
@@ -255,7 +255,7 @@ export default function AgendaInternaPage() {
       `Ante cualquier consulta estamos a su disposición. ¡Le esperamos!`;
 
     const url = `https://wa.me/${numLimpio}?text=${encodeURIComponent(textoWA)}`;
-    window.open(url, '_blank');
+    //window.open(url, '_blank');
   };
 
   const ejecutarCreacionTurnoManual = async (cancelarTurnoId?: number) => {
@@ -282,7 +282,7 @@ export default function AgendaInternaPage() {
     localStorage.setItem('medent_turnos_locales', JSON.stringify([...filtradosLocales, nuevoObj]));
 
     try {
-      await fetch('http://localhost:4000/api/turnos/solicitar-directo', {
+      await fetch('[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/turnos/solicitar-directo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -324,7 +324,7 @@ export default function AgendaInternaPage() {
     if (turnoDetalle?.id === id) setTurnoDetalle(null);
 
     try {
-      await fetch(`http://localhost:4000/api/turnos/${id}/cancelar`, { 
+      await fetch(`[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/turnos/${id}/cancelar`, { 
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' }
       });
