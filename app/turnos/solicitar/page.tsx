@@ -26,6 +26,7 @@ export default function SolicitarTurnoPublicoPage() {
   const [turnoConfirmado, setTurnoConfirmado] = useState<TurnoConfirmadoData | null>(null);
   const [cargando, setCargando] = useState(false);
 
+  const [fechaMinima, setFechaMinima] = useState('');
   const HORARIOS_BASE = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
 
   const cargarDisponibilidad = async (fechaSeleccionada: string) => {
@@ -42,6 +43,10 @@ export default function SolicitarTurnoPublicoPage() {
       setHorariosDisponibles(HORARIOS_BASE);
     }
   };
+
+useEffect(() => {
+  setFechaMinima(new Date().toISOString().split('T')[0]);
+}, []);
 
   useEffect(() => {
     if (fecha) {
@@ -221,7 +226,7 @@ export default function SolicitarTurnoPublicoPage() {
                 type="date"
                 required
                 value={fecha}
-                min={new Date().toISOString().split('T')[0]}
+                min={fechaMinima}
                 onChange={(e) => setFecha(e.target.value)}
                 className="w-full text-xs border border-gray-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 font-bold"
               />
