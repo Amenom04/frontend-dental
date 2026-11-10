@@ -32,7 +32,7 @@ export default function DirectivoPacientesPage() {
 
   const cargarPacientes = () => {
     setCargando(true);
-    fetch('[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/pacientes')
+    fetch('https://medent-backend.onrender.com/api/pacientes')
       .then(async res => (res.ok ? await res.json() : []))
       .then(data => {
         if (Array.isArray(data)) setPacientes(data);
@@ -52,7 +52,7 @@ export default function DirectivoPacientesPage() {
 
     setGuardando(true);
     try {
-      const res = await fetch('[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/pacientes', {
+      const res = await fetch('https://medent-backend.onrender.com/api/pacientes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

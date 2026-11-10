@@ -31,7 +31,7 @@ export default function SolicitarTurnoPublicoPage() {
 
   const cargarDisponibilidad = async (fechaSeleccionada: string) => {
     try {
-      const res = await fetch(`[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/turnos/disponibilidad?fecha=${fechaSeleccionada}`);
+      const res = await fetch(`https://medent-backend.onrender.com/api/turnos/disponibilidad?fecha=${fechaSeleccionada}`);
       if (res.ok) {
         const ocupados: string[] = await res.json();
         const libres = HORARIOS_BASE.filter(h => !ocupados.includes(h));
@@ -66,7 +66,7 @@ useEffect(() => {
     setErrorSimultaneo('');
 
     try {
-      const res = await fetch('[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/turnos/solicitar-directo', {
+      const res = await fetch('https://medent-backend.onrender.com/api/turnos/solicitar-directo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

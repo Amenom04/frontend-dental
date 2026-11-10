@@ -55,7 +55,7 @@ function ContenidoPaciente({ params }: Props) {
     setMounted(true);
     const cargarDatos = async () => {
       try {
-        const res = await fetch(`[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/pacientes/${id}`);
+        const res = await fetch(`https://medent-backend.onrender.com/api/pacientes/${id}`);
         if (res.ok) {
           const data = await res.json();
           setPaciente(data);

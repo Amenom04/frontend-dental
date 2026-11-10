@@ -137,7 +137,7 @@ export default function SolicitarTurnoPage() {
 
     // 2. Envío silencioso en segundo plano vía API (sin abrir pestañas)
     try {
-      await fetch('[https://medent-backend.onrender.com](https://medent-backend.onrender.com)/api/turnos/confirmar-whatsapp', {
+      await fetch('https://medent-backend.onrender.com/api/turnos/confirmar-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
