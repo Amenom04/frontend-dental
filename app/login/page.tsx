@@ -57,7 +57,7 @@ export default function LoginPage() {
                 required
                 autoFocus
                 placeholder="Ingresa tu usuario"
-                className="w-full text-sm border-2 border-gray-200 focus:border-blue-500 rounded-xl p-3 outline-none transition-colors bg-slate-50 font-medium"
+                className="w-full text-sm text-gray-900 border-2 border-gray-200 focus:border-blue-500 rounded-xl p-3 outline-none transition-colors bg-slate-50 font-medium"
               />
             </div>
 
@@ -69,7 +69,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
-                className="w-full text-sm border-2 border-gray-200 focus:border-blue-500 rounded-xl p-3 outline-none transition-colors bg-slate-50 font-medium"
+                className="w-full text-sm text-gray-900border-2 border-gray-200 focus:border-blue-500 rounded-xl p-3 outline-none transition-colors bg-slate-50 font-medium"
               />
             </div>
 
