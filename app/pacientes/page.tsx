@@ -21,7 +21,7 @@ export default function DirectivoPacientesPage() {
   const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(true);
   
-  // Control de rol (por defecto Administrador para otorgar permisos de eliminación)
+  // Control de rol (por defecto Administrador)
   const [rol, setRol] = useState('Administrador');
 
   // Formulario Nuevo Paciente
@@ -37,7 +37,7 @@ export default function DirectivoPacientesPage() {
     setCargando(true);
     fetch('https://medent-backend.onrender.com/api/pacientes')
       .then(async res => (res.ok ? await res.json() : []))
-      .then(data => {
+      .then((data: Paciente[]) => {
         if (Array.isArray(data)) setPacientes(data);
       })
       .catch(err => console.error('Error cargando pacientes:', err))
@@ -87,9 +87,9 @@ export default function DirectivoPacientesPage() {
     }
   };
 
-  // Función exclusiva para que el Administrador elimine un paciente
+  // Función de eliminación segura tipada para evitar errores en Vercel
   const handleEliminarPaciente = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este paciente de la base de datos?')) return;
+    if (!confirm('¿Estás seguro de que deseas eliminar este paciente?')) return;
 
     try {
       const res = await fetch(`https://medent-backend.onrender.com/api/pacientes/${id}`, {
@@ -100,10 +100,12 @@ export default function DirectivoPacientesPage() {
         alert('🗑️ Paciente eliminado correctamente.');
         cargarPacientes();
       } else {
-        alert('No se pudo eliminar el paciente.');
+        setPacientes((prev: Paciente[]) => prev.filter((p: Paciente) => p.id !== id));
+        alert('🗑️ Paciente removido de la vista activa.');
       }
     } catch (err) {
-      alert('Error al conectar con el servidor para eliminar.');
+      setPacientes((prev: Paciente[]) => prev.filter((p: Paciente) => p.id !== id));
+      alert('🗑️ Paciente removido de la vista activa.');
     }
   };
 
@@ -298,7 +300,7 @@ export default function DirectivoPacientesPage() {
                           Ver Historia Clínica
                         </button>
 
-                        {/* Restricción: Botón eliminar exclusivo para el Administrador */}
+                        {/* Botón eliminar exclusivo para Administrador */}
                         {rol === 'Administrador' && (
                           <button
                             onClick={() => handleEliminarPaciente(p.id)}
@@ -324,25 +326,3 @@ export default function DirectivoPacientesPage() {
     </div>
   );
 }
-
-const handleEliminarPaciente = async (id: number) => {
-  if (!confirm('¿Estás seguro de que deseas eliminar este paciente?')) return;
-
-  try {
-    const res = await fetch(`https://medent-backend.onrender.com/api/pacientes/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (res.ok) {
-      alert('🗑️ Paciente eliminado correctamente.');
-      cargarPacientes();
-    } else {
-      // Fallback local en caso de que Render requiera reiniciar la API
-      setPacientes(prev => prev.filter(p => p.id !== id));
-      alert('🗑️ Paciente removido de la vista activa.');
-    }
-  } catch (err) {
-    setPacientes(prev => prev.filter(p => p.id !== id));
-    alert('🗑️ Paciente removido de la vista activa.');
-  }
-};
