@@ -278,3 +278,12 @@ export default function DirectivoPacientesPage() {
     </div>
   );
 }
+// Ejemplo dentro de la fila de cada paciente en la tabla/lista:
+{usuario?.rol === 'admin' && (
+  <button
+    onClick={() => eliminarPaciente(paciente.id)}
+    className="px-3 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+  >
+    Eliminar
+  </button>
+)}

@@ -223,3 +223,10 @@ export default function DashboardPage() {
     Ingresar al Módulo →
   </Link>
 </div>
+
+{usuario?.rol === 'admin' && (
+  <div className="admin-actions flex gap-3">
+    <Link href="/configuracion" className="btn-primary">Configuración General</Link>
+    <Link href="/dashboard" className="btn-secondary">Gestión de Usuarios y Roles</Link>
+  </div>
+)}

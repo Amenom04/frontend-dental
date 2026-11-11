@@ -17,55 +17,54 @@ export default function LandingPage() {
   const mensajeWA = encodeURIComponent(config.whatsappMensaje || 'Hola! Quisiera realizar una consulta.');
   const urlWhatsApp = `https://wa.me/${config.whatsappNumero || '5493511234567'}?text=${mensajeWA}`;
 
+  // Rutas de imagenes con fallback a la carpeta public local
+  const foto1 = config.fondoFoto1Url || '/foto 1.jpg';
+  const foto2 = config.fondoFoto2Url || '/foto 2.jpg';
+  const foto3 = config.fondoFoto3Url || '/foto 3.jpg';
+
   return (
     <div
-      className={`min-h-screen relative flex flex-col justify-between overflow-hidden ${config.tipoTipografia}`}
+      className={`min-h-screen relative flex flex-col justify-between overflow-hidden ${config.tipoTipografia || ''}`}
       style={{ backgroundColor: config.colorFondo || '#f8fafc' }}
     >
       {/* 🖼️ FOTO 1: SUPERIOR DERECHA (HERO) CON DESPLAZAMIENTO Y TAMAÑO DINÁMICO */}
-      {config.fondoFoto1Url && (
-        <div
-          className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-right-top transition-all"
-          style={{
-            backgroundImage: `url(${config.fondoFoto1Url})`,
-            opacity: config.fondoOpacidad ?? 0.15,
-            width: `${config.foto1Tamano || 420}px`,
-            height: `${config.foto1Tamano || 420}px`,
-            top: `${config.foto1PosY ?? 80}px`,
-            right: `${config.foto1PosX ?? 0}px`
-          }}
-        />
-      )}
+      <div
+        className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-right-top transition-all"
+        style={{
+          backgroundImage: `url('${foto1}')`,
+          opacity: config.fondoOpacidad ?? 0.15,
+          width: `${config.foto1Tamano || 420}px`,
+          height: `${config.foto1Tamano || 420}px`,
+          top: `${config.foto1PosY ?? 80}px`,
+          right: `${config.foto1PosX ?? 0}px`
+        }}
+      />
 
       {/* 🖼️ FOTO 2: CENTRAL IZQUIERDA (SERVICIOS) */}
-      {config.fondoFoto2Url && (
-        <div
-          className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-left-center transition-all -translate-y-1/2"
-          style={{
-            backgroundImage: `url(${config.fondoFoto2Url})`,
-            opacity: config.fondoOpacidad ?? 0.15,
-            width: `${config.foto2Tamano || 380}px`,
-            height: `${config.foto2Tamano || 380}px`,
-            top: `${config.foto2PosY ?? 50}%`,
-            left: `${config.foto2PosX ?? 0}px`
-          }}
-        />
-      )}
+      <div
+        className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-left-center transition-all -translate-y-1/2"
+        style={{
+          backgroundImage: `url('${foto2}')`,
+          opacity: config.fondoOpacidad ?? 0.15,
+          width: `${config.foto2Tamano || 380}px`,
+          height: `${config.foto2Tamano || 380}px`,
+          top: `${config.foto2PosY ?? 50}%`,
+          left: `${config.foto2PosX ?? 0}px`
+        }}
+      />
 
       {/* 🖼️ FOTO 3: INFERIOR DERECHA (FOOTER) */}
-      {config.fondoFoto3Url && (
-        <div
-          className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-right-bottom transition-all"
-          style={{
-            backgroundImage: `url(${config.fondoFoto3Url})`,
-            opacity: config.fondoOpacidad ?? 0.15,
-            width: `${config.foto3Tamano || 380}px`,
-            height: `${config.foto3Tamano || 380}px`,
-            bottom: `${config.foto3PosY ?? 0}px`,
-            right: `${config.foto3PosX ?? 0}px`
-          }}
-        />
-      )}
+      <div
+        className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-right-bottom transition-all"
+        style={{
+          backgroundImage: `url('${foto3}')`,
+          opacity: config.fondoOpacidad ?? 0.15,
+          width: `${config.foto3Tamano || 380}px`,
+          height: `${config.foto3Tamano || 380}px`,
+          bottom: `${config.foto3PosY ?? 0}px`,
+          right: `${config.foto3PosX ?? 0}px`
+        }}
+      />
 
       {/* BANNER PROMOCIONAL SUPERIOR */}
       {config.bannerPromocional && (
@@ -183,7 +182,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-{/* SECCIÓN DE 3 TARJETAS INFORMATIVAS */}
+        {/* SECCIÓN DE 3 TARJETAS INFORMATIVAS */}
         <section className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
