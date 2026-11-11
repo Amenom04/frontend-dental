@@ -20,6 +20,9 @@ export default function DirectivoPacientesPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(true);
+  
+  // Control de rol (por defecto Administrador para otorgar permisos de eliminación)
+  const [rol, setRol] = useState('Administrador');
 
   // Formulario Nuevo Paciente
   const [nombre, setNombre] = useState('');
@@ -84,6 +87,26 @@ export default function DirectivoPacientesPage() {
     }
   };
 
+  // Función exclusiva para que el Administrador elimine un paciente
+  const handleEliminarPaciente = async (id: number) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este paciente de la base de datos?')) return;
+
+    try {
+      const res = await fetch(`https://medent-backend.onrender.com/api/pacientes/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        alert('🗑️ Paciente eliminado correctamente.');
+        cargarPacientes();
+      } else {
+        alert('No se pudo eliminar el paciente.');
+      }
+    } catch (err) {
+      alert('Error al conectar con el servidor para eliminar.');
+    }
+  };
+
   if (!mounted) return null;
 
   const pacientesFiltrados = pacientes.filter(p => {
@@ -101,7 +124,20 @@ export default function DirectivoPacientesPage() {
           <h1 className="text-xl font-black">MeDent</h1>
           <p className="text-[10px] uppercase font-bold text-blue-100">CLÍNICA ODONTOLÓGICA — FICHAS & HISTORIAS CLÍNICAS</p>
         </Link>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-blue-700 px-2.5 py-1 rounded-xl border border-blue-500 mr-2">
+            <span className="text-xs font-bold text-blue-100">Modo:</span>
+            <select
+              value={rol}
+              onChange={(e) => setRol(e.target.value)}
+              className="bg-white text-blue-900 font-extrabold text-xs p-1 rounded-lg outline-none cursor-pointer"
+            >
+              <option value="Administrador">Administrador</option>
+              <option value="Odontólogo">Odontólogo</option>
+              <option value="Secretaría">Secretaría</option>
+            </select>
+          </div>
+
           <Link href="/dashboard" className="bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs py-2 px-3 rounded-xl border border-blue-400">
             📊 Volver al Dashboard
           </Link>
@@ -254,13 +290,23 @@ export default function DirectivoPacientesPage() {
                       <td className="p-3 text-gray-700">
                         {p.obra_social || 'Particular'}
                       </td>
-                      <td className="p-3 text-right">
+                      <td className="p-3 text-right flex items-center justify-end gap-2">
                         <button
                           onClick={() => router.push(`/pacientes/ficha?id=${p.id}`)}
                           className="bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] py-1.5 px-3 rounded-lg shadow-sm transition-colors cursor-pointer"
                         >
                           Ver Historia Clínica
                         </button>
+
+                        {/* Restricción: Botón eliminar exclusivo para el Administrador */}
+                        {rol === 'Administrador' && (
+                          <button
+                            onClick={() => handleEliminarPaciente(p.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] py-1.5 px-3 rounded-lg shadow-sm transition-colors cursor-pointer"
+                          >
+                            Eliminar
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -278,12 +324,3 @@ export default function DirectivoPacientesPage() {
     </div>
   );
 }
-// Ejemplo dentro de la fila de cada paciente en la tabla/lista:
-{usuario?.rol === 'admin' && (
-  <button
-    onClick={() => eliminarPaciente(paciente.id)}
-    className="px-3 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
-  >
-    Eliminar
-  </button>
-)}

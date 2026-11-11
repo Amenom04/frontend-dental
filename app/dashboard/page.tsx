@@ -82,7 +82,25 @@ export default function DashboardPage() {
           </span>
         </div>
 
+        {/* ACCIONES EXCLUSIVAS PARA ADMINISTRADOR */}
+        {rol === 'Administrador' && (
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl flex items-center justify-between">
+            <span className="text-xs font-bold text-blue-900">
+              👑 Acciones Administrativas Activas
+            </span>
+            <div className="flex gap-3">
+              <Link href="/configuracion" className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-4 rounded-xl transition-colors">
+                Configuración General
+              </Link>
+              <Link href="/dashboard" className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 px-4 rounded-xl transition-colors">
+                Gestión de Usuarios y Roles
+              </Link>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* TARJETA 1: AGENDA */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -97,6 +115,7 @@ export default function DashboardPage() {
             </Link>
           </div>
 
+          {/* TARJETA 2: PACIENTES */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -111,6 +130,7 @@ export default function DashboardPage() {
             </Link>
           </div>
 
+          {/* TARJETA 3: ODONTOGRAMA */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -125,6 +145,7 @@ export default function DashboardPage() {
             </button>
           </div>
 
+          {/* TARJETA 4: FINANZAS */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -139,6 +160,7 @@ export default function DashboardPage() {
             </button>
           </div>
 
+          {/* TARJETA 5: RRHH */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -153,6 +175,7 @@ export default function DashboardPage() {
             </button>
           </div>
 
+          {/* TARJETA 6: CONFIGURACIÓN */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -175,58 +198,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-{/* TARJETA DE PACIENTES EN APP/DASHBOARD/PAGE.TSX */}
-<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-4">
-  <div className="flex justify-between items-start">
-    <div className="w-10 h-10 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-xl">
-      👥
-    </div>
-    <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full uppercase">
-      Habilitado
-    </span>
-  </div>
-
-  <div>
-    <h3 className="text-base font-black text-gray-900">Pacientes e Historias Clínicas</h3>
-    <p className="text-xs text-gray-500 mt-1">Fichas médicas, antecedentes y datos personales.</p>
-  </div>
-
-  <Link 
-    href="/pacientes/lista" 
-    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-2.5 px-4 rounded-xl shadow-sm transition-colors block text-center"
-  >
-    Ingresar al Módulo →
-  </Link>
-</div> 
-
-{/* TARJETA DE PACIENTES EN APP/DASHBOARD/PAGE.TSX */}
-<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-4">
-  <div className="flex justify-between items-start">
-    <div className="w-10 h-10 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-xl">
-      👥
-    </div>
-    <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full uppercase">
-      Habilitado
-    </span>
-  </div>
-
-  <div>
-    <h3 className="text-base font-black text-gray-900">Pacientes e Historias Clínicas</h3>
-    <p className="text-xs text-gray-500 mt-1">Fichas médicas, antecedentes y datos personales.</p>
-  </div>
-
-  <Link 
-    href="/pacientes" 
-    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-2.5 px-4 rounded-xl shadow-sm transition-colors block text-center"
-  >
-    Ingresar al Módulo →
-  </Link>
-</div>
-
-{usuario?.rol === 'admin' && (
-  <div className="admin-actions flex gap-3">
-    <Link href="/configuracion" className="btn-primary">Configuración General</Link>
-    <Link href="/dashboard" className="btn-secondary">Gestión de Usuarios y Roles</Link>
-  </div>
-)}
