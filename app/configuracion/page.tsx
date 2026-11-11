@@ -59,6 +59,8 @@ export default function ConfiguracionPage() {
   const [nuevaPractica, setNuevaPractica] = useState('');
   const [nombreOdontologo, setNombreOdontologo] = useState('');
   const [especialidadOdontologo, setEspecialidadOdontologo] = useState('');
+  const [usuarioOdontologo, setUsuarioOdontologo] = useState('');
+  const [passOdontologo, setPassOdontologo] = useState('');
 
   const handleSubirLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,6 +128,8 @@ export default function ConfiguracionPage() {
     agregarOdontologo({ nombre: nombreOdontologo, especialidad: especialidadOdontologo });
     setNombreOdontologo('');
     setEspecialidadOdontologo('');
+    setUsuarioOdontologo('');
+    setPassOdontologo('');
   };
 
   return (
@@ -418,23 +422,23 @@ export default function ConfiguracionPage() {
                     onChange={e => handleSubirFondoFoto(e, setFondoFoto1Url)}
                     className="text-[11px] w-full file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-indigo-100 file:text-indigo-800 font-bold cursor-pointer"
                   />
-                  {fondoFoto1Url && (
-                    <div className="space-y-2 text-[11px] font-bold text-slate-700">
-                      <div>
-                        <span>Tamaño: {foto1Tamano}px</span>
-                        <input type="range" min="200" max="800" value={foto1Tamano} onChange={e => setFoto1Tamano(Number(e.target.value))} className="w-full accent-indigo-600" />
-                      </div>
-                      <div>
-                        <span>Bajar / Subir (Y): {foto1PosY}px</span>
-                        <input type="range" min="0" max="300" value={foto1PosY} onChange={e => setFoto1PosY(Number(e.target.value))} className="w-full accent-indigo-600" />
-                      </div>
-                      <div>
-                        <span>Desplazar Izq. (X): {foto1PosX}px</span>
-                        <input type="range" min="-100" max="200" value={foto1PosX} onChange={e => setFoto1PosX(Number(e.target.value))} className="w-full accent-indigo-600" />
-                      </div>
-                      <button type="button" onClick={() => setFondoFoto1Url('')} className="text-[10px] text-red-600 underline">Quitar Foto 1</button>
+                  <div className="space-y-2 text-[11px] font-bold text-slate-700">
+                    <div>
+                      <span>Tamaño: {foto1Tamano}px</span>
+                      <input type="range" min="100" max="800" value={foto1Tamano} onChange={e => setFoto1Tamano(Number(e.target.value))} className="w-full accent-indigo-600" />
                     </div>
-                  )}
+                    <div>
+                      <span>Bajar / Subir (Y): {foto1PosY}px</span>
+                      <input type="range" min="-100" max="500" value={foto1PosY} onChange={e => setFoto1PosY(Number(e.target.value))} className="w-full accent-indigo-600" />
+                    </div>
+                    <div>
+                      <span>Desplazar Izq. / Der. (X): {foto1PosX}px</span>
+                      <input type="range" min="-100" max="500" value={foto1PosX} onChange={e => setFoto1PosX(Number(e.target.value))} className="w-full accent-indigo-600" />
+                    </div>
+                    {fondoFoto1Url && (
+                      <button type="button" onClick={() => setFondoFoto1Url('')} className="text-[10px] text-red-600 underline">Quitar Foto 1</button>
+                    )}
+                  </div>
                 </div>
 
                 {/* CONTROLES FOTO 2 */}
@@ -446,23 +450,23 @@ export default function ConfiguracionPage() {
                     onChange={e => handleSubirFondoFoto(e, setFondoFoto2Url)}
                     className="text-[11px] w-full file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-indigo-100 file:text-indigo-800 font-bold cursor-pointer"
                   />
-                  {fondoFoto2Url && (
-                    <div className="space-y-2 text-[11px] font-bold text-slate-700">
-                      <div>
-                        <span>Tamaño: {foto2Tamano}px</span>
-                        <input type="range" min="200" max="800" value={foto2Tamano} onChange={e => setFoto2Tamano(Number(e.target.value))} className="w-full accent-indigo-600" />
-                      </div>
-                      <div>
-                        <span>Posición Vertical (%): {foto2PosY}%</span>
-                        <input type="range" min="20" max="80" value={foto2PosY} onChange={e => setFoto2PosY(Number(e.target.value))} className="w-full accent-indigo-600" />
-                      </div>
-                      <div>
-                        <span>Desplazar Der. (X): {foto2PosX}px</span>
-                        <input type="range" min="-100" max="200" value={foto2PosX} onChange={e => setFoto2PosX(Number(e.target.value))} className="w-full accent-indigo-600" />
-                      </div>
-                      <button type="button" onClick={() => setFondoFoto2Url('')} className="text-[10px] text-red-600 underline">Quitar Foto 2</button>
+                  <div className="space-y-2 text-[11px] font-bold text-slate-700">
+                    <div>
+                      <span>Tamaño: {foto2Tamano}px</span>
+                      <input type="range" min="100" max="800" value={foto2Tamano} onChange={e => setFoto2Tamano(Number(e.target.value))} className="w-full accent-indigo-600" />
                     </div>
-                  )}
+                    <div>
+                      <span>Posición Vertical (%): {foto2PosY}%</span>
+                      <input type="range" min="0" max="100" value={foto2PosY} onChange={e => setFoto2PosY(Number(e.target.value))} className="w-full accent-indigo-600" />
+                    </div>
+                    <div>
+                      <span>Desplazar Izq. / Der. (X): {foto2PosX}px</span>
+                      <input type="range" min="-100" max="500" value={foto2PosX} onChange={e => setFoto2PosX(Number(e.target.value))} className="w-full accent-indigo-600" />
+                    </div>
+                    {fondoFoto2Url && (
+                      <button type="button" onClick={() => setFondoFoto2Url('')} className="text-[10px] text-red-600 underline">Quitar Foto 2</button>
+                    )}
+                  </div>
                 </div>
 
                 {/* CONTROLES FOTO 3 */}
@@ -474,23 +478,23 @@ export default function ConfiguracionPage() {
                     onChange={e => handleSubirFondoFoto(e, setFondoFoto3Url)}
                     className="text-[11px] w-full file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-indigo-100 file:text-indigo-800 font-bold cursor-pointer"
                   />
-                  {fondoFoto3Url && (
-                    <div className="space-y-2 text-[11px] font-bold text-slate-700">
-                      <div>
-                        <span>Tamaño: {foto3Tamano}px</span>
-                        <input type="range" min="200" max="800" value={foto3Tamano} onChange={e => setFoto3Tamano(Number(e.target.value))} className="w-full accent-indigo-600" />
-                      </div>
-                      <div>
-                        <span>Subir desde Abajo (Y): {foto3PosY}px</span>
-                        <input type="range" min="0" max="200" value={foto3PosY} onChange={e => setFoto3PosY(Number(e.target.value))} className="w-full accent-indigo-600" />
-                      </div>
-                      <div>
-                        <span>Desplazar Izq. (X): {foto3PosX}px</span>
-                        <input type="range" min="-100" max="200" value={foto3PosX} onChange={e => setFoto3PosX(Number(e.target.value))} className="w-full accent-indigo-600" />
-                      </div>
-                      <button type="button" onClick={() => setFondoFoto3Url('')} className="text-[10px] text-red-600 underline">Quitar Foto 3</button>
+                  <div className="space-y-2 text-[11px] font-bold text-slate-700">
+                    <div>
+                      <span>Tamaño: {foto3Tamano}px</span>
+                      <input type="range" min="100" max="800" value={foto3Tamano} onChange={e => setFoto3Tamano(Number(e.target.value))} className="w-full accent-indigo-600" />
                     </div>
-                  )}
+                    <div>
+                      <span>Subir desde Abajo (Y): {foto3PosY}px</span>
+                      <input type="range" min="-100" max="500" value={foto3PosY} onChange={e => setFoto3PosY(Number(e.target.value))} className="w-full accent-indigo-600" />
+                    </div>
+                    <div>
+                      <span>Desplazar Izq. / Der. (X): {foto3PosX}px</span>
+                      <input type="range" min="-100" max="500" value={foto3PosX} onChange={e => setFoto3PosX(Number(e.target.value))} className="w-full accent-indigo-600" />
+                    </div>
+                    {fondoFoto3Url && (
+                      <button type="button" onClick={() => setFondoFoto3Url('')} className="text-[10px] text-red-600 underline">Quitar Foto 3</button>
+                    )}
+                  </div>
                 </div>
 
               </div>
@@ -545,7 +549,7 @@ export default function ConfiguracionPage() {
               👨‍⚕️ Plantilla de Odontólogos
             </h3>
 
-            <form onSubmit={handleAgregarOdontologo} className="space-y-2">
+            <form onSubmit={handleAgregarOdontologo} className="space-y-3">
               <input
                 type="text"
                 required
@@ -554,21 +558,48 @@ export default function ConfiguracionPage() {
                 placeholder="Nombre (Ej. Od. Juan Pérez)"
                 className="w-full text-xs border rounded-xl p-2.5 bg-slate-50 outline-none focus:border-blue-500"
               />
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={especialidadOdontologo}
-                  onChange={e => setEspecialidadOdontologo(e.target.value)}
-                  placeholder="Especialidad (Ej. Endodoncia)"
-                  className="flex-1 text-xs border rounded-xl p-2.5 bg-slate-50 outline-none focus:border-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 rounded-xl cursor-pointer"
-                >
-                  + Agregar
-                </button>
+              <input
+                type="text"
+                value={especialidadOdontologo}
+                onChange={e => setEspecialidadOdontologo(e.target.value)}
+                placeholder="Especialidad (Ej. Endodoncia)"
+                className="w-full text-xs border rounded-xl p-2.5 bg-slate-50 outline-none focus:border-blue-500"
+              />
+
+              {/* CAMPOS DE CREDENCIALES (INTEGRADOS) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-600 mb-1 uppercase tracking-wider">
+                    👤 Usuario de Acceso
+                  </label>
+                  <input 
+                    type="text" 
+                    value={usuarioOdontologo}
+                    onChange={e => setUsuarioOdontologo(e.target.value)}
+                    placeholder="Ej. smartinez" 
+                    className="w-full text-xs border border-gray-200 rounded-xl p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-600 mb-1 uppercase tracking-wider">
+                    🔑 Contraseña Temporal
+                  </label>
+                  <input 
+                    type="password" 
+                    value={passOdontologo}
+                    onChange={e => setPassOdontologo(e.target.value)}
+                    placeholder="••••••••" 
+                    className="w-full text-xs border border-gray-200 rounded-xl p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" 
+                  />
+                </div>
               </div>
+
+              <button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-xl cursor-pointer"
+              >
+                + Agregar Odontólogo
+              </button>
             </form>
 
             <div className="divide-y text-xs max-h-80 overflow-y-auto">
@@ -595,27 +626,3 @@ export default function ConfiguracionPage() {
     </div>
   );
 }
-
-{/* CAMPOS DE CREDENCIALES (NUEVO) */}
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 mt-2 border-t border-gray-100">
-  <div>
-    <label className="block text-[11px] font-bold text-gray-600 mb-1 uppercase tracking-wider">
-      👤 Usuario de Acceso
-    </label>
-    <input 
-      type="text" 
-      placeholder="Ej. smartinez" 
-      className="w-full text-xs border border-gray-200 rounded-xl p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" 
-    />
-  </div>
-  <div>
-    <label className="block text-[11px] font-bold text-gray-600 mb-1 uppercase tracking-wider">
-      🔑 Contraseña Temporal
-    </label>
-    <input 
-      type="password" 
-      placeholder="••••••••" 
-      className="w-full text-xs border border-gray-200 rounded-xl p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" 
-    />
-  </div>
-</div>
