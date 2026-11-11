@@ -17,10 +17,10 @@ export default function LandingPage() {
   const mensajeWA = encodeURIComponent(config.whatsappMensaje || 'Hola! Quisiera realizar una consulta.');
   const urlWhatsApp = `https://wa.me/${config.whatsappNumero || '5493511234567'}?text=${mensajeWA}`;
 
-  // Rutas de imagenes con fallback a la carpeta public local
-  const foto1 = config.fondoFoto1Url || '/foto 1.jpg';
-  const foto2 = config.fondoFoto2Url || '/foto 2.jpg';
-  const foto3 = config.fondoFoto3Url || '/foto 3.jpg';
+  // Compatibilidad total de rutas con las imágenes detectadas en tu carpeta public
+  const foto1 = config.fondoFoto1Url || '/foto-1.jpg';
+  const foto2 = config.fondoFoto2Url || '/foto-2.jpg';
+  const foto3 = config.fondoFoto3Url || '/foto-3.jpg';
 
   return (
     <div
@@ -31,7 +31,7 @@ export default function LandingPage() {
       <div
         className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-right-top transition-all"
         style={{
-          backgroundImage: `url('${foto1}')`,
+          backgroundImage: `url('${foto1}'), url('/foto-1')`,
           opacity: config.fondoOpacidad ?? 0.15,
           width: `${config.foto1Tamano || 420}px`,
           height: `${config.foto1Tamano || 420}px`,
@@ -44,7 +44,7 @@ export default function LandingPage() {
       <div
         className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-left-center transition-all -translate-y-1/2"
         style={{
-          backgroundImage: `url('${foto2}')`,
+          backgroundImage: `url('${foto2}'), url('/foto-2')`,
           opacity: config.fondoOpacidad ?? 0.15,
           width: `${config.foto2Tamano || 380}px`,
           height: `${config.foto2Tamano || 380}px`,
@@ -57,7 +57,7 @@ export default function LandingPage() {
       <div
         className="absolute pointer-events-none z-0 bg-no-repeat bg-contain bg-right-bottom transition-all"
         style={{
-          backgroundImage: `url('${foto3}')`,
+          backgroundImage: `url('${foto3}'), url('/foto-3')`,
           opacity: config.fondoOpacidad ?? 0.15,
           width: `${config.foto3Tamano || 380}px`,
           height: `${config.foto3Tamano || 380}px`,

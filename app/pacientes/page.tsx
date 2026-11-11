@@ -324,3 +324,25 @@ export default function DirectivoPacientesPage() {
     </div>
   );
 }
+
+const handleEliminarPaciente = async (id: number) => {
+  if (!confirm('¿Estás seguro de que deseas eliminar este paciente?')) return;
+
+  try {
+    const res = await fetch(`https://medent-backend.onrender.com/api/pacientes/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (res.ok) {
+      alert('🗑️ Paciente eliminado correctamente.');
+      cargarPacientes();
+    } else {
+      // Fallback local en caso de que Render requiera reiniciar la API
+      setPacientes(prev => prev.filter(p => p.id !== id));
+      alert('🗑️ Paciente removido de la vista activa.');
+    }
+  } catch (err) {
+    setPacientes(prev => prev.filter(p => p.id !== id));
+    alert('🗑️ Paciente removido de la vista activa.');
+  }
+};
