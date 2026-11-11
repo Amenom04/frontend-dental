@@ -19,10 +19,9 @@ export default function LoginPage() {
     setCargando(true);
 
     setTimeout(() => {
-      // Aquí conectaremos luego con tu base de datos de Recursos Humanos.
-      // Por ahora, funciona con el usuario maestro o si coincide con la tarjeta de RRHH.
+      // Redirección directa y automática al Dashboard principal
       if ((usuario === 'admin' && password === '1234') || (usuario.length > 3 && password.length > 3)) {
-        router.push('/turnos');
+        router.push('/dashboard');
       } else {
         setError('Usuario o contraseña incorrectos.');
         setCargando(false);
@@ -69,7 +68,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
-                className="w-full px-4 py-2 text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder-slate-400"
+                className="w-full px-4 py-2 text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder-slate-400 font-medium"
               />
             </div>
 
