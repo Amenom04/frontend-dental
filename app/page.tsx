@@ -237,7 +237,7 @@ export default function LandingPage() {
         </a>
       )}
 
-      {/* FOOTER */} hola gemini no aparece la 
+      {/* FOOTER */}
       <footer className="bg-white/90 backdrop-blur-sm border-t py-8 text-center text-xs text-slate-500 space-y-2 z-10 relative">
         <p className="font-bold text-slate-800">
           {config.nombreClinica || 'MeDent Clínica Odontológica'} — {config.direccion || 'Atención Presencial'}
