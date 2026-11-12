@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useConfig } from '@/context/ConfigContext';
 
@@ -37,11 +37,12 @@ export default function AgendaInternaPage() {
   const { config } = useConfig();
   const [mounted, setMounted] = useState(false);
   const [turnos, setTurnos] = useState<Turno[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const [cargando, setCargando] = useState(false);
   const [sesion, setSesion] = useState<SesionActiva | null>(null);
 
-  // Navegación de Fechas y Vistas
-  const [fechaActual, setFechaActual] = useState(new Date(2026, 10, 6));
+  // Navegación de Fechas y Vistas (se actualiza al día real en useEffect)
+  const [fechaActual, setFechaActual] = useState<Date | null>(null);
+  const [hoyRealStr, setHoyRealStr] = useState<string>('');
   const [modoVista, setModoVista] = useState<'dia' | 'semana' | 'mes'>('semana');
 
   // Modal de Detalle del Turno
@@ -61,7 +62,7 @@ export default function AgendaInternaPage() {
   const [manualTelefono, setManualTelefono] = useState('');
   const [manualProf, setManualProf] = useState('Od. Sofía Martínez');
   const [manualEsp, setManualEsp] = useState('Cirugía Maxilofacial');
-  const [manualDia, setManualDia] = useState('06');
+  const [manualDia, setManualDia] = useState('12');
   const [manualMes, setManualMes] = useState('11');
   const [manualAnio, setManualAnio] = useState('2026');
   const [manualHora, setManualHora] = useState('11:30');
@@ -93,51 +94,6 @@ export default function AgendaInternaPage() {
     { num: '10', nombre: 'Octubre' }, { num: '11', nombre: 'Noviembre' }, { num: '12', nombre: 'Diciembre' }
   ];
 
-  const cargarTurnos = () => {
-    const turnosLocalesRaw = localStorage.getItem('medent_turnos_locales');
-    const turnosLocales: Turno[] = turnosLocalesRaw ? JSON.parse(turnosLocalesRaw) : [];
-
-    fetch('https://medent-backend.onrender.com/api/turnos', { cache: 'no-store' })
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        if (Array.isArray(data)) {
-          const idsExistentes = new Set(data.map((t: Turno) => t.id));
-          const unificados = [...data, ...turnosLocales.filter(t => !idsExistentes.has(t.id))];
-          setTurnos(unificados);
-        } else {
-          setTurnos(turnosLocales);
-        }
-      })
-      .catch(() => {
-        setTurnos(turnosLocales);
-      })
-      .finally(() => setCargando(false));
-  };
-
-  useEffect(() => {
-    const sesionGuardada = localStorage.getItem('medent_sesion');
-    if (sesionGuardada) {
-      setSesion(JSON.parse(sesionGuardada));
-    } else {
-      // Respaldo por defecto si se entra directo sin pasar por login
-      setSesion({ email: 'admin@medent.com', rol: 'admin', nombre: 'Dirección Médica', autenticado: true });
-    }
-
-    setMounted(true);
-    cargarTurnos();
-
-    const interval = setInterval(() => {
-      cargarTurnos();
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const cerrarSesion = () => {
-    localStorage.removeItem('medent_sesion');
-    router.push('/login');
-  };
-
   const formatoFechaISO = (d: Date) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -151,6 +107,77 @@ export default function AgendaInternaPage() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${day}/${m}/${y}`;
   };
+
+  const cargarTurnos = useCallback(async (mostrarIndicador = false) => {
+    // 1. Carga inmediata desde respaldo local para evitar espera visual
+    const turnosLocalesRaw = localStorage.getItem('medent_turnos_locales');
+    const turnosLocales: Turno[] = turnosLocalesRaw ? JSON.parse(turnosLocalesRaw) : [];
+    if (turnosLocales.length > 0) {
+      setTurnos(prev => (prev.length === 0 ? turnosLocales : prev));
+    }
+
+    if (mostrarIndicador) setCargando(true);
+
+    // 2. Consulta al backend con timeout para no colgar la interfaz si Render está despertando
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    try {
+      const res = await fetch('https://medent-backend.onrender.com/api/turnos', {
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const idsExistentes = new Set(data.map((t: Turno) => t.id));
+          const unificados = [...data, ...turnosLocales.filter(t => !idsExistentes.has(t.id))];
+          setTurnos(unificados);
+        }
+      }
+    } catch {
+      // Si el servidor aún está despertando, se mantienen los datos locales sin bloquear
+      setTurnos(prev => (prev.length === 0 ? turnosLocales : prev));
+    } finally {
+      clearTimeout(timeoutId);
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const ahora = new Date();
+    setFechaActual(ahora);
+    setHoyRealStr(formatoFechaArg(ahora));
+    setManualDia(String(ahora.getDate()).padStart(2, '0'));
+    setManualMes(String(ahora.getMonth() + 1).padStart(2, '0'));
+    setManualAnio(String(ahora.getFullYear()));
+
+    const sesionGuardada = localStorage.getItem('medent_sesion');
+    if (sesionGuardada) {
+      setSesion(JSON.parse(sesionGuardada));
+    } else {
+      setSesion({ email: 'admin@medent.com', rol: 'admin', nombre: 'Dirección Médica', autenticado: true });
+    }
+
+    setMounted(true);
+    cargarTurnos(true);
+
+    // Sincronización periódica cada 15 segundos sin saturar el servidor
+    const interval = setInterval(() => {
+      cargarTurnos(false);
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [cargarTurnos]);
+
+  const cerrarSesion = () => {
+    localStorage.removeItem('medent_sesion');
+    router.push('/login');
+  };
+
+  if (!mounted || !fechaActual) return null;
 
   const obtenerDiasSemana = () => {
     const curr = new Date(fechaActual);
@@ -213,11 +240,16 @@ export default function AgendaInternaPage() {
   };
 
   const irAHoy = () => {
-    setFechaActual(new Date(2026, 10, 6));
+    const hoy = new Date();
+    setFechaActual(hoy);
+    setHoyRealStr(formatoFechaArg(hoy));
   };
 
   const abrirModalParaHorario = (hora: string, fechaTarget?: string) => {
-    let d = '06', m = '11', a = '2026';
+    let d = String(fechaActual.getDate()).padStart(2, '0');
+    let m = String(fechaActual.getMonth() + 1).padStart(2, '0');
+    let a = String(fechaActual.getFullYear());
+
     if (fechaTarget) {
       if (fechaTarget.includes('/')) {
         const p = fechaTarget.split('/');
@@ -226,10 +258,6 @@ export default function AgendaInternaPage() {
         const p = fechaTarget.split('-');
         a = p[0]; m = p[1]; d = p[2];
       }
-    } else {
-      d = String(fechaActual.getDate()).padStart(2, '0');
-      m = String(fechaActual.getMonth() + 1).padStart(2, '0');
-      a = String(fechaActual.getFullYear());
     }
 
     setTurnoIdAReprogramar(null);
@@ -302,6 +330,12 @@ export default function AgendaInternaPage() {
     const filtradosLocales = idAEnviar ? locales.filter((t: Turno) => t.id !== idAEnviar) : locales;
     localStorage.setItem('medent_turnos_locales', JSON.stringify([...filtradosLocales, nuevoObj]));
 
+    // Actualización instantánea en pantalla
+    setTurnos(prev => {
+      const sinAnterior = idAEnviar ? prev.filter(t => t.id !== idAEnviar) : prev;
+      return [...sinAnterior, nuevoObj];
+    });
+
     try {
       await fetch('https://medent-backend.onrender.com/api/turnos/solicitar-directo', {
         method: 'POST',
@@ -322,7 +356,7 @@ export default function AgendaInternaPage() {
       setManualTelefono('');
       setManualMotivo('');
       setGuardandoTurno(false);
-      cargarTurnos();
+      cargarTurnos(false);
     }
   };
 
@@ -358,8 +392,6 @@ export default function AgendaInternaPage() {
   const irAHistoriaClinica = (nombrePaciente: string) => {
     router.push(`/pacientes?buscar=${encodeURIComponent(nombrePaciente)}`);
   };
-
-  if (!mounted) return null;
 
   const esAdmin = sesion?.rol === 'admin';
 
@@ -414,7 +446,7 @@ export default function AgendaInternaPage() {
           </button>
 
           <button
-            onClick={cargarTurnos}
+            onClick={() => cargarTurnos(true)}
             className="bg-blue-700 hover:bg-blue-800 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors cursor-pointer"
           >
             🔄 Actualizar
@@ -431,7 +463,6 @@ export default function AgendaInternaPage() {
             👥 Historias
           </Link>
 
-          {/* SOLO VISIBLE PARA ADMINISTRADORES */}
           {esAdmin && (
             <>
               <Link href="/dashboard" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
@@ -630,14 +661,14 @@ export default function AgendaInternaPage() {
         <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-200 space-y-3 no-print">
           <div className="flex flex-wrap justify-between items-center gap-3">
             <div className="flex items-center gap-2">
-              <button onClick={() => desplazarFecha(-1)} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm px-3 py-1.5 rounded-xl border">◀</button>
+              <button onClick={() => desplazarFecha(-1)} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm px-3 py-1.5 rounded-xl border cursor-pointer">◀</button>
               <div className="bg-blue-50 border border-blue-200 text-blue-900 text-xs font-black px-3.5 py-1.5 rounded-xl">
                 {modoVista === 'dia' && `📅 DÍA: ${formatoFechaArg(fechaActual)}`}
                 {modoVista === 'semana' && `📆 SEMANA: ${DIAS_SEMANA[0]?.label} — ${DIAS_SEMANA[4]?.label}`}
                 {modoVista === 'mes' && `🗓️ MES: ${MESES[fechaActual.getMonth()].nombre.toUpperCase()} ${fechaActual.getFullYear()}`}
               </div>
-              <button onClick={() => desplazarFecha(1)} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm px-3 py-1.5 rounded-xl border">▶</button>
-              <button onClick={irAHoy} className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-sm">Hoy</button>
+              <button onClick={() => desplazarFecha(1)} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm px-3 py-1.5 rounded-xl border cursor-pointer">▶</button>
+              <button onClick={irAHoy} className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-sm cursor-pointer">Hoy</button>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -664,9 +695,9 @@ export default function AgendaInternaPage() {
             </div>
 
             <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
-              <button onClick={() => setModoVista('dia')} className={`text-xs font-black px-3 py-1 rounded-xl transition-all ${modoVista === 'dia' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>Día</button>
-              <button onClick={() => setModoVista('semana')} className={`text-xs font-black px-3 py-1 rounded-xl transition-all ${modoVista === 'semana' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>Semana</button>
-              <button onClick={() => setModoVista('mes')} className={`text-xs font-black px-3 py-1 rounded-xl transition-all ${modoVista === 'mes' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>Mes</button>
+              <button onClick={() => setModoVista('dia')} className={`text-xs font-black px-3 py-1 rounded-xl transition-all cursor-pointer ${modoVista === 'dia' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>Día</button>
+              <button onClick={() => setModoVista('semana')} className={`text-xs font-black px-3 py-1 rounded-xl transition-all cursor-pointer ${modoVista === 'semana' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>Semana</button>
+              <button onClick={() => setModoVista('mes')} className={`text-xs font-black px-3 py-1 rounded-xl transition-all cursor-pointer ${modoVista === 'mes' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>Mes</button>
             </div>
           </div>
         </div>
@@ -746,9 +777,9 @@ export default function AgendaInternaPage() {
                         <td className="p-3 text-right no-print">
                           {turnoEncontrado && (
                             <div className="flex gap-1 justify-end">
-                              <button onClick={() => enviarWhatsAppConfirmacion(turnoEncontrado)} className="text-[10px] bg-emerald-600 text-white font-black px-2 py-1 rounded-lg">📱 WA</button>
-                              <button onClick={() => iniciarReprogramacion(turnoEncontrado)} className="text-[10px] bg-amber-500 text-white font-black px-2 py-1 rounded-lg">🔄</button>
-                              <button onClick={() => cancelarTurnoDirecto(turnoEncontrado.id)} className="text-[10px] bg-red-600 text-white font-black px-2 py-1 rounded-lg">✕</button>
+                              <button onClick={() => enviarWhatsAppConfirmacion(turnoEncontrado)} className="text-[10px] bg-emerald-600 text-white font-black px-2 py-1 rounded-lg cursor-pointer">📱 WA</button>
+                              <button onClick={() => iniciarReprogramacion(turnoEncontrado)} className="text-[10px] bg-amber-500 text-white font-black px-2 py-1 rounded-lg cursor-pointer">🔄</button>
+                              <button onClick={() => cancelarTurnoDirecto(turnoEncontrado.id)} className="text-[10px] bg-red-600 text-white font-black px-2 py-1 rounded-lg cursor-pointer">✕</button>
                             </div>
                           )}
                         </td>
@@ -767,12 +798,18 @@ export default function AgendaInternaPage() {
                 <thead>
                   <tr className="bg-slate-100 text-[11px] font-black text-gray-700 border-b">
                     <th className="p-3 border-r w-28 text-center">HORA</th>
-                    {DIAS_SEMANA.map(d => (
-                      <th key={d.fecha_arg} className="p-3 border-r text-center w-1/5">
-                        <div>{d.nombre}</div>
-                        <div className="text-[10px] font-bold text-blue-600">{d.label}</div>
-                      </th>
-                    ))}
+                    {DIAS_SEMANA.map(d => {
+                      const esHoyCol = d.fecha_arg === hoyRealStr;
+                      return (
+                        <th key={d.fecha_arg} className={`p-3 border-r text-center w-1/5 ${esHoyCol ? 'bg-blue-100/70' : ''}`}>
+                          <div className="flex items-center justify-center gap-1">
+                            <span>{d.nombre}</span>
+                            {esHoyCol && <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.2 rounded">HOY</span>}
+                          </div>
+                          <div className="text-[10px] font-bold text-blue-600">{d.label}</div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="divide-y text-xs">
@@ -788,6 +825,7 @@ export default function AgendaInternaPage() {
                       </td>
 
                       {DIAS_SEMANA.map(d => {
+                        const esHoyCol = d.fecha_arg === hoyRealStr;
                         const turnoEncontrado = turnosFiltrados.find(t => {
                           const mismaFecha = (
                             t.fecha === d.fecha_arg || 
@@ -799,7 +837,7 @@ export default function AgendaInternaPage() {
                         });
 
                         return (
-                          <td key={d.fecha_arg} className="p-1.5 border-r h-16 vertical-top">
+                          <td key={d.fecha_arg} className={`p-1.5 border-r h-16 vertical-top ${esHoyCol ? 'bg-blue-50/30' : ''}`}>
                             {turnoEncontrado ? (
                               <div className="bg-blue-600 text-white p-2 rounded-2xl text-[11px] shadow-sm space-y-1 relative group">
                                 <button
@@ -862,7 +900,7 @@ export default function AgendaInternaPage() {
                 <div className="grid grid-cols-7 gap-2">
                   {DIAS_MES.map(item => {
                     const turnosDelDia = turnosFiltrados.filter(t => t.fecha === item.fechaArg || t.fecha === item.fechaISO);
-                    const esHoy = item.fechaArg === '06/11/2026';
+                    const esHoy = item.fechaArg === hoyRealStr;
 
                     return (
                       <div
