@@ -60,7 +60,7 @@ function FichaPacienteContent() {
   });
 
   /* =========================================
-     ESTADOS: EVOLUCIONES & REGISTRO DIRECTO
+     ESTADOS: EVOLUCIONES & REGISTRO ACUMULATIVO
   ========================================= */
   const [evoluciones, setEvoluciones] = useState<Evolucion[]>([]);
   const [nuevaFecha, setNuevaFecha] = useState(new Date().toISOString().split('T')[0]);
@@ -119,7 +119,6 @@ function FichaPacienteContent() {
   useEffect(() => {
     setMounted(true);
     
-    // Cargar Datos del Paciente desde LocalStorage o Backend
     const pacienteGuardado = localStorage.getItem(`medent_paciente_datos_${pacienteId}`);
     if (pacienteGuardado) {
       setPaciente(JSON.parse(pacienteGuardado));
@@ -156,7 +155,7 @@ function FichaPacienteContent() {
   ========================================= */
   const handleAgregarEvolucion = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoDiagnostico.trim()) return alert('Por favor ingresa un diagnóstico.');
+    if (!nuevoDiagnostico.trim()) return alert('Por favor ingresa un diagnóstico o haz clic en el odontograma.');
 
     setGuardandoEvolucion(true);
 
@@ -177,7 +176,7 @@ function FichaPacienteContent() {
     setNuevoTratamiento('');
     setNuevasObservaciones('');
     setGuardandoEvolucion(false);
-    alert('✅ Diagnóstico y evolución registrados en el expediente.');
+    alert('✅ Evolución clínica guardada exitosamente.');
   };
 
   /* =========================================
@@ -267,7 +266,7 @@ function FichaPacienteContent() {
   const detenerArrastreVisor = () => setEstaArrastrando(false);
 
   /* =========================================
-     MÉTODOS: ODONTOGRAMA DE 5 CARAS
+     MÉTODOS: ODONTOGRAMA DE 5 CARAS CON ACUMULACIÓN
   ========================================= */
   const getColorCara = (clave: string) => {
     const estado = carasColoreadas[clave] || 'ninguno';
@@ -288,7 +287,7 @@ function FichaPacienteContent() {
     }));
   };
 
-  // 🔥 ACTIVACIÓN DIRECTA DE OBSERVACIONES AL HACER CLIC EN LAS CARAS
+  // 🔥 REGISTRO ACUMULATIVO: CADA CLIC AÑADE UN HALLAZGO SIN BORRAR LOS ANTERIORES
   const handleClicIzquierdo = (pieza: number, caraClave: string) => {
     const clave = `${pieza}-${caraClave}`;
     const nombreCaraEsp = NOMBRES_CARAS_ESPANOL[caraClave] || caraClave;
@@ -303,10 +302,9 @@ function FichaPacienteContent() {
     setRegistrosDentales(nuevosRegistros);
     guardarOdontogramaLocal(nuevasCaras, nuevosRegistros);
 
-    // ⚡ SE ACTIVA EL CUADRO DE OBSERVACIONES / DIAGNÓSTICO DIRECTAMENTE
-    setNuevoDiagnostico(`Pieza ${pieza} - Cara ${nombreCaraEsp}: Hallazgo de ${estadoTexto}`);
-    setNuevoTratamiento(`Procedimiento sugerido para Pieza ${pieza}`);
-    setNuevasObservaciones(`Marcación registrada desde el odontograma para la cara ${nombreCaraEsp}.`);
+    // ACUMULAR HALLAZGOS EN EL CAMPO DE DIAGNÓSTICO DE LA SESIÓN
+    const lineaHallazgo = `• Pieza ${pieza} (${nombreCaraEsp}): ${estadoTexto}`;
+    setNuevoDiagnostico(prev => (prev ? `${prev}\n${lineaHallazgo}` : lineaHallazgo));
   };
 
   const handleClicDerecho = (e: React.MouseEvent, pieza: number, caraClave: string) => {
@@ -321,8 +319,8 @@ function FichaPacienteContent() {
     setRegistrosDentales(nuevosRegistros);
     guardarOdontogramaLocal(nuevasCaras, nuevosRegistros);
 
-    setNuevoDiagnostico(`Pieza ${pieza} - Cara ${nombreCaraEsp}: Limpieza de marcas`);
-    setNuevasObservaciones(`Se removió el estado previo de la cara ${nombreCaraEsp} en Pieza ${pieza}.`);
+    const lineaRemovida = `• Pieza ${pieza} (${nombreCaraEsp}): REMOVIDO`;
+    setNuevoDiagnostico(prev => (prev ? `${prev}\n${lineaRemovida}` : lineaRemovida));
   };
 
   const limpiarOdontograma = () => {
@@ -330,6 +328,7 @@ function FichaPacienteContent() {
       setCarasColoreadas({});
       setRegistrosDentales([]);
       guardarOdontogramaLocal({}, []);
+      setNuevoDiagnostico('');
     }
   };
 
@@ -376,7 +375,6 @@ function FichaPacienteContent() {
         {/* COLUMNA IZQUIERDA: FICHA Y ANTECEDENTES EDITABLES */}
         <div className="lg:col-span-4 space-y-6">
           
-          {/* FICHA TÉCNICA DEL PACIENTE */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
@@ -470,7 +468,7 @@ function FichaPacienteContent() {
 
         </div>
 
-        {/* COLUMNA DERECHA: PESTAÑAS DENTALES Y EVOLUCIONES */}
+        {/* COLUMNA DERECHA: PESTAÑAS DENTALES Y REGISTRO CLINICO */}
         <div className="lg:col-span-8 space-y-6">
           
           <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-2 no-print">
@@ -596,11 +594,22 @@ function FichaPacienteContent() {
             </div>
           )}
 
-          {/* 🔥 FORMULARIO Y REGISTRO DE EVOLUCIONES / OBSERVACIONES */}
+          {/* 🔥 FORMULARIO DE EVOLUCIONES CON CAMPOS AMPLIADOS Y ACUMULATIVOS */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
-            <h3 className="text-xs font-black text-blue-950 uppercase tracking-wider border-b pb-3">
-              📝 REGISTRO Y OBSERVACIONES DE EVOLUCIÓN CÍNICA
-            </h3>
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-xs font-black text-blue-950 uppercase tracking-wider">
+                📝 REGISTRO Y OBSERVACIONES DE EVOLUCIÓN CLÍNICA
+              </h3>
+              {nuevoDiagnostico && (
+                <button
+                  type="button"
+                  onClick={() => setNuevoDiagnostico('')}
+                  className="text-[10px] text-red-600 font-bold underline cursor-pointer"
+                >
+                  Limpiar Lista de Hallazgos
+                </button>
+              )}
+            </div>
 
             <form onSubmit={handleAgregarEvolucion} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -622,21 +631,23 @@ function FichaPacienteContent() {
                     value={nuevoProfesional}
                     onChange={(e) => setNuevoProfesional(e.target.value)}
                     required
-                    placeholder="Ej. Od. Juan Pérez"
+                    placeholder="Ej. Od. Principal"
                     className="w-full text-xs font-bold border rounded-xl p-2.5 bg-slate-50 outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Diagnóstico / Hallazgo *</label>
-                <input
-                  type="text"
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Diagnóstico / Hallazgos Acumulados (Odontograma) *
+                </label>
+                <textarea
+                  rows={4}
                   value={nuevoDiagnostico}
                   onChange={(e) => setNuevoDiagnostico(e.target.value)}
                   required
-                  placeholder="Se completa automáticamente al hacer clic en las caras del odontograma..."
-                  className="w-full text-xs font-bold border rounded-xl p-2.5 bg-blue-50/50 border-blue-200 text-blue-900 outline-none"
+                  placeholder="Los hallazgos que vayas marcando en el odontograma se irán agregando aquí automáticamente..."
+                  className="w-full text-xs font-bold border border-blue-200 rounded-xl p-3 bg-blue-50/50 text-blue-900 outline-none"
                 />
               </div>
 
@@ -646,34 +657,37 @@ function FichaPacienteContent() {
                   type="text"
                   value={nuevoTratamiento}
                   onChange={(e) => setNuevoTratamiento(e.target.value)}
-                  placeholder="Ej. Obturación resina fotocurable, cavidad clase I"
+                  placeholder="Ej. Profilaxis general, reconstrucción en composite"
                   className="w-full text-xs font-medium border rounded-xl p-2.5 bg-slate-50 outline-none"
                 />
               </div>
 
+              {/* ⚡ CAMPO DE OBSERVACIONES AGRANDADO PARA CÓMODA REDACCIÓN */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Observaciones / Indicaciones Post-atención</label>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Observaciones / Indicaciones Post-Atención (Espacio Ampliado)
+                </label>
                 <textarea
-                  rows={2}
+                  rows={6}
                   value={nuevasObservaciones}
                   onChange={(e) => setNuevasObservaciones(e.target.value)}
-                  placeholder="Escribe aquí las observaciones o indicaciones del paciente..."
-                  className="w-full text-xs font-medium border rounded-xl p-2.5 bg-slate-50 outline-none"
+                  placeholder="Escribe aquí todas las observaciones detalladas de la sesión, evoluciones o indicaciones para el paciente..."
+                  className="w-full text-xs font-medium border rounded-xl p-3 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={guardandoEvolucion}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-3 rounded-xl shadow-md transition-colors cursor-pointer"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-3.5 rounded-xl shadow-md transition-colors cursor-pointer"
                 style={{ backgroundColor: config?.colorPrimario || '#2563eb' }}
               >
-                {guardandoEvolucion ? 'Guardando Evolución...' : '+ Agregar Registro a Historia Clínica'}
+                {guardandoEvolucion ? 'Guardando Registro...' : '+ Agregar Registro Completo a Historia Clínica'}
               </button>
             </form>
           </div>
 
-          {/* HISTORIAL DE REGISTROS / EVOLUCIONES */}
+          {/* HISTORIAL DE EVOLUCIONES GUARDADAS */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b pb-3">
               📜 Historial de Evoluciones Registradas ({evoluciones.length})
@@ -693,9 +707,9 @@ function FichaPacienteContent() {
                     </div>
 
                     <div className="space-y-1 text-xs">
-                      <p><strong className="text-slate-800">Diagnóstico:</strong> {ev.diagnostico}</p>
+                      <div className="whitespace-pre-line"><strong className="text-slate-800">Diagnóstico:</strong> {ev.diagnostico}</div>
                       {ev.tratamiento && <p><strong className="text-slate-800">Tratamiento:</strong> {ev.tratamiento}</p>}
-                      {ev.observaciones && <p className="text-slate-500 italic"><strong className="text-slate-700">Obs:</strong> {ev.observaciones}</p>}
+                      {ev.observaciones && <p className="text-slate-600 whitespace-pre-line"><strong className="text-slate-700">Obs:</strong> {ev.observaciones}</p>}
                     </div>
                   </div>
                 ))}
