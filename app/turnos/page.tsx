@@ -25,12 +25,20 @@ interface Turno {
   estado: string;
 }
 
+interface SesionActiva {
+  email: string;
+  rol: 'admin' | 'odontologo' | 'recepcion';
+  nombre: string;
+  autenticado: boolean;
+}
+
 export default function AgendaInternaPage() {
   const router = useRouter();
   const { config } = useConfig();
   const [mounted, setMounted] = useState(false);
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [sesion, setSesion] = useState<SesionActiva | null>(null);
 
   // Navegación de Fechas y Vistas
   const [fechaActual, setFechaActual] = useState(new Date(2026, 10, 6));
@@ -107,6 +115,14 @@ export default function AgendaInternaPage() {
   };
 
   useEffect(() => {
+    const sesionGuardada = localStorage.getItem('medent_sesion');
+    if (sesionGuardada) {
+      setSesion(JSON.parse(sesionGuardada));
+    } else {
+      // Respaldo por defecto si se entra directo sin pasar por login
+      setSesion({ email: 'admin@medent.com', rol: 'admin', nombre: 'Dirección Médica', autenticado: true });
+    }
+
     setMounted(true);
     cargarTurnos();
 
@@ -116,6 +132,11 @@ export default function AgendaInternaPage() {
 
     return () => clearInterval(interval);
   }, []);
+
+  const cerrarSesion = () => {
+    localStorage.removeItem('medent_sesion');
+    router.push('/login');
+  };
 
   const formatoFechaISO = (d: Date) => {
     const y = d.getFullYear();
@@ -255,7 +276,7 @@ export default function AgendaInternaPage() {
       `Ante cualquier consulta estamos a su disposición. ¡Le esperamos!`;
 
     const url = `https://wa.me/${numLimpio}?text=${encodeURIComponent(textoWA)}`;
-    //window.open(url, '_blank');
+    window.open(url, '_blank');
   };
 
   const ejecutarCreacionTurnoManual = async (cancelarTurnoId?: number) => {
@@ -290,7 +311,7 @@ export default function AgendaInternaPage() {
           cancelar_turno_id: idAEnviar
         })
       });
-    } catch (err) {
+    } catch {
       console.log('Modo fallback local activado');
     } finally {
       setMostrarModalManual(false);
@@ -328,7 +349,7 @@ export default function AgendaInternaPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' }
       });
-    } catch (err) {
+    } catch {
       console.log('Cancelación realizada localmente');
     }
     alert('✅ Turno cancelado.');
@@ -339,6 +360,8 @@ export default function AgendaInternaPage() {
   };
 
   if (!mounted) return null;
+
+  const esAdmin = sesion?.rol === 'admin';
 
   const turnosFiltrados = turnos.filter(t => {
     if (t.estado === 'Cancelado' || t.estado === 'CANCELADO') return false;
@@ -362,21 +385,32 @@ export default function AgendaInternaPage() {
         }
       `}</style>
 
-      {/* HEADER SUPERIOR UNIFICADO */}
-      <header className="bg-blue-600 text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 no-print">
-        <Link href="/" className="flex flex-col hover:opacity-90 transition-opacity cursor-pointer">
-          <h1 className="text-2xl font-black tracking-tight leading-none">{config?.nombreClinica || 'MeDent'}</h1>
-          <p className="text-[10px] uppercase font-bold text-blue-100 tracking-widest mt-0.5">
-            CLÍNICA ODONTOLÓGICA — AGENDA INTERNA DE CONTROL
-          </p>
-        </Link>
+      {/* HEADER SUPERIOR CON PERMISOS POR ROL */}
+      <header className="bg-blue-600 text-white p-4 shadow-md flex flex-col lg:flex-row justify-between items-center gap-3 no-print">
+        <div className="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-start">
+          <Link href="/" className="flex flex-col hover:opacity-90 transition-opacity cursor-pointer">
+            <h1 className="text-2xl font-black tracking-tight leading-none">{config?.nombreClinica || 'MeDent'}</h1>
+            <p className="text-[10px] uppercase font-bold text-blue-100 tracking-widest mt-0.5">
+              AGENDA INTERNA DE CONTROL
+            </p>
+          </Link>
 
-        <div className="flex flex-wrap gap-2 items-center">
+          {sesion && (
+            <div className="bg-blue-700/80 border border-blue-400/50 px-3 py-1.5 rounded-xl text-left">
+              <span className="block text-[9px] uppercase font-black text-blue-200 tracking-wider">
+                Perfil: {sesion.rol === 'admin' ? '🛡️ Administrador' : sesion.rol === 'odontologo' ? '👨‍⚕️ Odontólogo' : '📋 Recepción'}
+              </span>
+              <span className="text-xs font-bold text-white">{sesion.nombre}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-center justify-center lg:justify-end w-full lg:w-auto">
           <button
             onClick={() => { setTurnoIdAReprogramar(null); setMostrarModalManual(true); }}
             className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 shadow-sm transition-colors cursor-pointer"
           >
-            + Agendar Turno Manual
+            + Agendar Turno
           </button>
 
           <button
@@ -390,28 +424,36 @@ export default function AgendaInternaPage() {
             onClick={() => window.print()}
             className="bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-indigo-400 shadow-sm transition-colors cursor-pointer"
           >
-            🖨️ Imprimir Agenda
+            🖨️ Imprimir
           </button>
-
-          <Link href="/dashboard" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
-            📊 Dashboard
-          </Link>
 
           <Link href="/pacientes" className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-2 px-3 rounded-xl shadow-sm transition-colors">
             👥 Historias
           </Link>
 
-          <Link href="/configuracion" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
-            ⚙️ Config
-          </Link>
+          {/* SOLO VISIBLE PARA ADMINISTRADORES */}
+          {esAdmin && (
+            <>
+              <Link href="/dashboard" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
+                📊 Dashboard
+              </Link>
+
+              <Link href="/configuracion" className="bg-blue-800 hover:bg-blue-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-blue-400 transition-colors">
+                ⚙️ Config
+              </Link>
+            </>
+          )}
 
           <Link href="/" className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs py-2 px-3 rounded-xl border border-slate-700 transition-colors">
             🏠 Inicio
           </Link>
 
-          <Link href="/login" className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs py-2 px-3 rounded-xl shadow-sm transition-colors">
+          <button
+            onClick={cerrarSesion}
+            className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs py-2 px-3 rounded-xl shadow-sm transition-colors cursor-pointer"
+          >
             🚪 Salir
-          </Link>
+          </button>
         </div>
       </header>
 
@@ -582,7 +624,7 @@ export default function AgendaInternaPage() {
       )}
 
       {/* CONTENIDO PRINCIPAL */}
-      <main className="p-6 max-w-7xl mx-auto w-full space-y-4">
+      <main className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-4">
         
         {/* BARRA SUPERIOR DE CONTROL */}
         <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-200 space-y-3 no-print">
@@ -645,8 +687,8 @@ export default function AgendaInternaPage() {
 
           {/* 1. VISTA DÍA */}
           {modoVista === 'dia' && (
-            <div className="p-4 space-y-2">
-              <table className="w-full text-left border-collapse">
+            <div className="p-4 overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[650px]">
                 <thead>
                   <tr className="bg-slate-100 text-[11px] font-black text-gray-700 border-b">
                     <th className="p-3 w-32 text-center">HORA</th>
@@ -721,7 +763,7 @@ export default function AgendaInternaPage() {
           {/* 2. VISTA SEMANA */}
           {modoVista === 'semana' && (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="bg-slate-100 text-[11px] font-black text-gray-700 border-b">
                     <th className="p-3 border-r w-28 text-center">HORA</th>
@@ -811,46 +853,48 @@ export default function AgendaInternaPage() {
 
           {/* 3. VISTA MES */}
           {modoVista === 'mes' && (
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-7 gap-2 text-center text-xs font-black text-gray-600 border-b pb-2">
-                <div>DOM</div><div>LUN</div><div>MAR</div><div>MIÉ</div><div>JUE</div><div>VIE</div><div>SÁB</div>
-              </div>
+            <div className="p-4 space-y-4 overflow-x-auto">
+              <div className="min-w-[600px] space-y-4">
+                <div className="grid grid-cols-7 gap-2 text-center text-xs font-black text-gray-600 border-b pb-2">
+                  <div>DOM</div><div>LUN</div><div>MAR</div><div>MIÉ</div><div>JUE</div><div>VIE</div><div>SÁB</div>
+                </div>
 
-              <div className="grid grid-cols-7 gap-2">
-                {DIAS_MES.map(item => {
-                  const turnosDelDia = turnosFiltrados.filter(t => t.fecha === item.fechaArg || t.fecha === item.fechaISO);
-                  const esHoy = item.fechaArg === '06/11/2026';
+                <div className="grid grid-cols-7 gap-2">
+                  {DIAS_MES.map(item => {
+                    const turnosDelDia = turnosFiltrados.filter(t => t.fecha === item.fechaArg || t.fecha === item.fechaISO);
+                    const esHoy = item.fechaArg === '06/11/2026';
 
-                  return (
-                    <div
-                      key={item.fechaISO}
-                      onClick={() => {
-                        setFechaActual(new Date(item.fechaISO + 'T00:00:00'));
-                        setModoVista('dia');
-                      }}
-                      className={`min-h-[90px] border rounded-2xl p-2.5 flex flex-col justify-between transition-all cursor-pointer hover:border-blue-500 ${
-                        esHoy ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-400' : 'bg-slate-50 border-gray-200'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className={`text-xs font-black ${esHoy ? 'text-blue-900 font-extrabold' : 'text-gray-700'}`}>
-                          {item.diaNum}
-                        </span>
-                        {esHoy && <span className="text-[9px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded">HOY</span>}
+                    return (
+                      <div
+                        key={item.fechaISO}
+                        onClick={() => {
+                          setFechaActual(new Date(item.fechaISO + 'T00:00:00'));
+                          setModoVista('dia');
+                        }}
+                        className={`min-h-[90px] border rounded-2xl p-2.5 flex flex-col justify-between transition-all cursor-pointer hover:border-blue-500 ${
+                          esHoy ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-400' : 'bg-slate-50 border-gray-200'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className={`text-xs font-black ${esHoy ? 'text-blue-900 font-extrabold' : 'text-gray-700'}`}>
+                            {item.diaNum}
+                          </span>
+                          {esHoy && <span className="text-[9px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded">HOY</span>}
+                        </div>
+
+                        <div>
+                          {turnosDelDia.length > 0 ? (
+                            <div className="bg-blue-600 text-white text-[10px] font-black p-1 rounded-lg text-center shadow-sm">
+                              {turnosDelDia.length} Turno(s)
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-gray-400 text-center font-medium">Sin turnos</div>
+                          )}
+                        </div>
                       </div>
-
-                      <div>
-                        {turnosDelDia.length > 0 ? (
-                          <div className="bg-blue-600 text-white text-[10px] font-black p-1 rounded-lg text-center shadow-sm">
-                            {turnosDelDia.length} Turno(s)
-                          </div>
-                        ) : (
-                          <div className="text-[10px] text-gray-400 text-center font-medium">Sin turnos</div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
