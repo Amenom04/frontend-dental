@@ -1,340 +1,348 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useConfig } from '../../context/ConfigContext';
+import { useConfig } from '@/context/ConfigContext';
+
+interface TurnoAgendado {
+  id: number;
+  fecha: string;
+  hora: string;
+  paciente: string;
+  dni: string;
+  telefono: string;
+  email?: string;
+  obraSocial: string;
+  practica: string;
+  odontologo: string;
+  estado: 'Confirmado' | 'Esperando' | 'En Atención' | 'Finalizado' | 'Cancelado';
+}
 
 export default function SolicitarTurnoPage() {
-  const { config } = useConfig();
+  const { config, practicas, odontologos } = useConfig() as any;
   const [mounted, setMounted] = useState(false);
 
-  const practicasDisponibles = [
-    'Odontología General / Consulta',
-    'Limpieza Dental / Profilaxis',
-    'Consulta por Ortodoncia',
-    'Cirugía Maxilofacial',
-    'Guardia / Urgencia Dental',
-    'Diagnóstico Radiológico (Pantomografía)'
-  ];
+  // Pasos del formulario público (1: Especialidad/Odontólogo/Horario, 2: Datos del Paciente, 3: Confirmación)
+  const [paso, setPaso] = useState<1 | 2 | 3>(1);
 
-  const [paso, setPaso] = useState(1);
-  const [motivo, setMotivo] = useState(practicasDisponibles[0]);
-  
-  const [fechaTextoArg, setFechaTextoArg] = useState('06/11/2026'); 
-  const [hora, setHora] = useState('');
+  // Catálogos dinámicos desde ConfigContext con respaldo por defecto
+  const listaPracticas: string[] =
+    practicas && practicas.length > 0
+      ? practicas.map((p: any) => (typeof p === 'string' ? p : p.nombre))
+      : [
+          'Odontología General / Consulta',
+          'Limpieza Dental / Profilaxis',
+          'Consulta por Ortodoncia',
+          'Cirugía Maxilofacial',
+          'Guardia / Urgencia Dental',
+          'Diagnóstico Radiológico (Pantomografía)'
+        ];
 
-  const [mostrarCalendario, setMostrarCalendario] = useState(false);
-  const [mesActual, setMesActual] = useState(10);
-  const [anioActual, setAnioActual] = useState(2026);
-  const calendarRef = useRef<HTMLDivElement>(null);
+  const listaOdontologosBase: { nombre: string; especialidad?: string; practicas?: string[] }[] =
+    odontologos && odontologos.length > 0
+      ? odontologos.map((o: any) =>
+          typeof o === 'string'
+            ? { nombre: o, especialidad: 'Todas' }
+            : {
+                nombre: o.nombre || 'Od. Principal',
+                especialidad: o.especialidad || 'Todas',
+                practicas: o.practicas || []
+              }
+        )
+      : [
+          { nombre: 'Od. Principal', especialidad: 'Todas' },
+          { nombre: 'Dra. Laura Gómez', especialidad: 'Ortodoncia' },
+          { nombre: 'Dr. Martín Pérez', especialidad: 'Cirugía Maxilofacial' }
+        ];
 
-  const [nombre, setNombre] = useState('');
-  const [telefono, setTelefono] = useState('');
-  const [dni, setDni] = useState('');
-  const [email, setEmail] = useState('');
-  const [obraSocial, setObraSocial] = useState('');
+  // Estados de Selección (Paso 1)
+  const [practicaSeleccionada, setPracticaSeleccionada] = useState<string>(listaPracticas[0]);
+  const [odontologoSeleccionado, setOdontologoSeleccionado] = useState<string>('');
+  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
+  const [horaSeleccionada, setHoraSeleccionada] = useState<string>('');
 
+  // Estados de Datos del Paciente (Paso 2)
+  const [nombrePaciente, setNombrePaciente] = useState('');
+  const [dniPaciente, setDniPaciente] = useState('');
+  const [telefonoPaciente, setTelefonoPaciente] = useState('');
+  const [emailPaciente, setEmailPaciente] = useState('');
+  const [obraSocial, setObraSocial] = useState('Particular');
   const [enviando, setEnviando] = useState(false);
-  const [comprobante, setComprobante] = useState<any>(null);
-  const [horariosOcupados, setHorariosOcupados] = useState<string[]>([]);
+  const [turnosExistentes, setTurnosExistentes] = useState<TurnoAgendado[]>([]);
 
   const horariosDisponibles = [
-    '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00',
-    '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30'
+    '08:00', '08:30', '09:00', '09:30', '10:00',
+    '10:30', '11:00', '11:30', '12:00', '13:00',
+    '13:30', '14:00', '14:30', '15:00', '15:30',
+    '16:00', '16:30', '17:00', '17:30', '18:00',
+    '18:30'
   ];
 
-  const nombresMeses = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-
-  const diasSemana = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+  // Filtrar odontólogos habilitados para la práctica seleccionada (o mostrar todos si atienden todas)
+  const odontologosFiltrados = listaOdontologosBase.filter((od) => {
+    if (!od.especialidad || od.especialidad === 'Todas') return true;
+    if (od.practicas && od.practicas.length > 0) {
+      return od.practicas.includes(practicaSeleccionada);
+    }
+    return practicaSeleccionada.toLowerCase().includes(od.especialidad.toLowerCase()) || true;
+  });
 
   useEffect(() => {
-    const hoy = new Date();
-    const dia = String(hoy.getDate()).padStart(2, '0');
-    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-    const anio = hoy.getFullYear();
-    
-    setFechaTextoArg(`${dia}/${mes}/${anio}`);
-    setMesActual(hoy.getMonth());
-    setAnioActual(hoy.getFullYear());
     setMounted(true);
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
-        setMostrarCalendario(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const guardados = localStorage.getItem('medent_turnos');
+    if (guardados) {
+      setTurnosExistentes(JSON.parse(guardados));
+    }
   }, []);
 
-  const resetFormulario = () => {
-    setPaso(1);
-    setMotivo(practicasDisponibles[0]);
-    const hoy = new Date();
-    const dia = String(hoy.getDate()).padStart(2, '0');
-    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-    setFechaTextoArg(`${dia}/${mes}/${hoy.getFullYear()}`);
-    setHora('');
-    setNombre('');
-    setTelefono('');
-    setDni('');
-    setEmail('');
-    setObraSocial('');
-    setComprobante(null);
+  // Actualizar odontólogo por defecto cuando cambia la práctica o carga la lista
+  useEffect(() => {
+    if (odontologosFiltrados.length > 0) {
+      const sigueValido = odontologosFiltrados.some((o) => o.nombre === odontologoSeleccionado);
+      if (!sigueValido) {
+        setOdontologoSeleccionado(odontologosFiltrados[0].nombre);
+      }
+    }
+  }, [practicaSeleccionada, odontologosFiltrados, odontologoSeleccionado]);
+
+  // Verificar si un horario ya está reservado para ese odontólogo y fecha
+  const estaOcupado = (hora: string) => {
+    return turnosExistentes.some(
+      (t) =>
+        t.fecha === fechaSeleccionada &&
+        t.hora === hora &&
+        t.odontologo === odontologoSeleccionado &&
+        t.estado !== 'Cancelado'
+    );
   };
 
-  const obtenerDiasDelMes = (mes: number, anio: number) => {
-    const primerDia = new Date(anio, mes, 1);
-    const ultimoDia = new Date(anio, mes + 1, 0);
-    const diasEnMes = ultimoDia.getDate();
-    
-    let diaInicio = primerDia.getDay() - 1;
-    if (diaInicio === -1) diaInicio = 6;
-
-    const dias = [];
-    for (let i = 0; i < diaInicio; i++) dias.push(null);
-    for (let i = 1; i <= diasEnMes; i++) dias.push(i);
-    return dias;
-  };
-
-  const seleccionarDia = (dia: number) => {
-    const dStr = String(dia).padStart(2, '0');
-    const mStr = String(mesActual + 1).padStart(2, '0');
-    setFechaTextoArg(`${dStr}/${mStr}/${anioActual}`);
-    setHora('');
-    setMostrarCalendario(false);
-  };
-
-  const handleReservarPublico = async (e: React.FormEvent) => {
+  const handleConfirmarCita = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!nombrePaciente.trim() || !telefonoPaciente.trim()) {
+      return alert('Por favor completa tu nombre y teléfono de contacto.');
+    }
+
     setEnviando(true);
 
-    const idNuevo = Date.now();
-    const nuevoTurno = {
-      id: idNuevo,
-      codigo: 'MED-' + Math.floor(100000 + Math.random() * 900000),
-      paciente_nombre: nombre,
-      paciente_telefono: telefono,
-      telefono: telefono,
-      paciente_dni: dni,
-      paciente_email: email,
-      obra_social: obraSocial,
-      fecha: fechaTextoArg,
-      fecha_arg: fechaTextoArg,
-      hora: hora,
-      motivo: motivo,
-      especialidad: 'Odontología General',
-      profesional: 'Odontología General',
+    const nuevoTurno: TurnoAgendado = {
+      id: Date.now(),
+      fecha: fechaSeleccionada,
+      hora: horaSeleccionada,
+      paciente: nombrePaciente.trim(),
+      dni: dniPaciente.trim() || 'Sin especificar',
+      telefono: telefonoPaciente.trim(),
+      email: emailPaciente.trim(),
+      obraSocial: obraSocial.trim() || 'Particular',
+      practica: practicaSeleccionada,
+      odontologo: odontologoSeleccionado,
       estado: 'Confirmado'
     };
 
-    // 1. Persistencia Local
-    const localesPrevios = JSON.parse(localStorage.getItem('medent_turnos_locales') || '[]');
-    localStorage.setItem('medent_turnos_locales', JSON.stringify([...localesPrevios, nuevoTurno]));
-
-    // 2. Envío silencioso en segundo plano vía API (sin abrir pestañas)
     try {
-      await fetch('https://medent-backend.onrender.com/api/turnos/confirmar-whatsapp', {
+      // Guardar en almacenamiento local sincronizado con la Agenda Interna (/turnos)
+      const actualizados = [nuevoTurno, ...turnosExistentes];
+      setTurnosExistentes(actualizados);
+      localStorage.setItem('medent_turnos', JSON.stringify(actualizados));
+
+      // Intentar envío al Backend en Render (silencioso si aún no existe el endpoint)
+      await fetch('https://medent-backend.onrender.com/api/turnos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...nuevoTurno,
-          nombreClinica: config.nombreClinica
-        })
-      });
-    } catch (error) {
-      console.log('Turno registrado localmente. Servidor de WhatsApp no disponible.');
-    } finally {
-      setHorariosOcupados(prev => [...prev, hora]);
-      setComprobante(nuevoTurno);
+        body: JSON.stringify(nuevoTurno)
+      }).catch(() => null);
+
       setPaso(3);
+    } finally {
       setEnviando(false);
     }
   };
 
   if (!mounted) return null;
 
-  const hoy = new Date();
-  const diasGrilla = obtenerDiasDelMes(mesActual, anioActual);
-
   return (
-    <div className={`min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between ${config.tipoTipografia}`}>
-      <header className="bg-white border-b sticky top-0 z-40 shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-3.5 flex justify-between items-center">
-          <Link href="/" onClick={resetFormulario} className="flex items-center gap-3.5 select-none">
-            <svg width="46" height="46" viewBox="0 0 100 100" className="fill-none flex-shrink-0">
-              <path d="M 50,22 C 38,12 20,15 20,38 C 20,60 25,70 38,90 C 42,80 38,60 48,50 L 52,68 L 68,42" stroke="#2c3e50" strokeWidth="7.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M 50,22 C 62,12 80,15 80,38 C 80,60 75,70 62,90 L 56,76" stroke="#2563eb" strokeWidth="7.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <div
+      className={`min-h-screen flex flex-col justify-between bg-slate-50 text-slate-800 ${config?.tipoTipografia || ''}`}
+      style={{ backgroundColor: config?.colorFondo || '#f8fafc' }}
+    >
+      {/* HEADER PÚBLICO */}
+      <header className="bg-white border-b sticky top-0 z-30 shadow-sm">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
+          <Link href="/" className="flex items-center gap-3">
+            <svg width="36" height="36" viewBox="0 0 100 100" className="fill-none flex-shrink-0">
+              <path
+                d="M 50,22 C 38,12 20,15 20,38 C 20,60 25,70 38,90 C 42,80 38,60 48,50 L 52,68 L 68,42"
+                stroke={config?.colorPrimario || '#2563eb'}
+                strokeWidth="7.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 50,22 C 62,12 80,15 80,38 C 80,60 75,70 62,90 L 56,76"
+                stroke="#1e293b"
+                strokeWidth="7.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
-            <div>
-              <h1 className="text-xl font-black text-slate-900 leading-none">{config.nombreClinica}</h1>
-              <p className="text-[9px] font-extrabold uppercase text-blue-600 tracking-wider mt-1">SOLICITUD PÚBLICA DE CITA</p>
+            <div className="flex flex-col">
+              <span className="text-lg font-black text-slate-900 leading-tight">
+                {config?.nombreClinica || 'MeDent Clínica Odontológica'}
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: config?.colorPrimario || '#2563eb' }}>
+                SOLICITUD PÚBLICA DE CITA
+              </span>
             </div>
           </Link>
 
-          <Link href="/" onClick={resetFormulario} className="text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition-colors">
-            ← Volver al inicio
+          <Link
+            href="/"
+            className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors"
+          >
+            ← Volver al Inicio
           </Link>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto w-full px-6 py-10 flex-1">
-        {paso < 3 && (
-          <div className="mb-8 text-center space-y-2">
-            <h2 className="text-2xl font-black text-slate-900">Reserva tu Cita Dental</h2>
-            <p className="text-xs text-slate-500">
-              Ingresa tus datos y confirma el horario para asentarlo de forma directa e inmediata.
-            </p>
-          </div>
-        )}
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="max-w-3xl mx-auto w-full px-6 py-10 flex-1 space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Reserva tu Cita Dental</h1>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            Selecciona la práctica, el profesional de tu preferencia y confirma el horario de forma directa.
+          </p>
+        </div>
 
+        {/* PASO 1: PRÁCTICA, ODONTÓLOGO, FECHA Y HORARIO */}
         {paso === 1 && (
-          <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b pb-3">
-              1. Selecciona Fecha y Horario
-            </h3>
+          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6">
+            <h2 className="text-xs font-black uppercase tracking-wider text-slate-800 border-b pb-3">
+              1. SELECCIONA PRÁCTICA, PROFESIONAL Y HORARIO
+            </h2>
 
-            <div className="space-y-4">
+            {/* SELECTOR DE PRÁCTICA / ESPECIALIDAD */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Tipo de Consulta / Especialidad</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  🦷 Práctica / Especialidad *
+                </label>
                 <select
-                  value={motivo}
-                  onChange={e => setMotivo(e.target.value)}
-                  className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3.5 bg-slate-50 outline-none focus:border-blue-500 cursor-pointer text-slate-900"
+                  value={practicaSeleccionada}
+                  onChange={(e) => {
+                    setPracticaSeleccionada(e.target.value);
+                    setHoraSeleccionada('');
+                  }}
+                  className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3 bg-white text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {practicasDisponibles.map((p, index) => (
-                    <option key={index} value={p}>{p}</option>
+                  {listaPracticas.map((practica, idx) => (
+                    <option key={idx} value={practica}>
+                      {practica}
+                    </option>
                   ))}
                 </select>
               </div>
 
-              <div className="relative" ref={calendarRef}>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Fecha del Turno (dd/mm/aaaa) *</label>
-                
-                <button
-                  type="button"
-                  onClick={() => setMostrarCalendario(!mostrarCalendario)}
-                  className="w-full text-left text-xs font-bold border border-slate-300 rounded-xl p-3.5 bg-slate-50 hover:bg-slate-100 transition-colors flex justify-between items-center cursor-pointer"
+              {/* SELECTOR DE ODONTÓLOGO */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  👨‍⚕️ Profesional / Odontólogo *
+                </label>
+                <select
+                  value={odontologoSeleccionado}
+                  onChange={(e) => {
+                    setOdontologoSeleccionado(e.target.value);
+                    setHoraSeleccionada('');
+                  }}
+                  className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3 bg-white text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <span className="text-blue-900 font-extrabold">
-                    {fechaTextoArg}
-                  </span>
-                  <span className="text-base">📅</span>
-                </button>
-
-                {mostrarCalendario && (
-                  <div className="absolute top-full left-0 mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 w-72 space-y-3">
-                    <div className="flex justify-between items-center border-b pb-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (mesActual === 0) {
-                            setMesActual(11);
-                            setAnioActual(a => a - 1);
-                          } else {
-                            setMesActual(m => m - 1);
-                          }
-                        }}
-                        className="p-1 hover:bg-slate-100 rounded-lg text-xs font-black"
-                      >
-                        ←
-                      </button>
-                      <span className="text-xs font-black text-slate-900">
-                        {nombresMeses[mesActual]} {anioActual}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (mesActual === 11) {
-                            setMesActual(0);
-                            setAnioActual(a => a + 1);
-                          } else {
-                            setMesActual(m => m + 1);
-                          }
-                        }}
-                        className="p-1 hover:bg-slate-100 rounded-lg text-xs font-black"
-                      >
-                        →
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-1 text-center">
-                      {diasSemana.map(d => (
-                        <span key={d} className="text-[10px] font-black text-slate-400 uppercase py-1">
-                          {d}
-                        </span>
-                      ))}
-
-                      {diasGrilla.map((dia, idx) => {
-                        if (dia === null) return <div key={`empty-${idx}`} />;
-
-                        const fechaComparar = new Date(anioActual, mesActual, dia);
-                        const esPasado = fechaComparar < new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-                        const dStr = String(dia).padStart(2, '0');
-                        const mStr = String(mesActual + 1).padStart(2, '0');
-                        const fechaFormato = `${dStr}/${mStr}/${anioActual}`;
-                        const esSeleccionado = fechaTextoArg === fechaFormato;
-
-                        return (
-                          <button
-                            key={dia}
-                            type="button"
-                            disabled={esPasado}
-                            onClick={() => seleccionarDia(dia)}
-                            className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
-                              esPasado
-                                ? 'text-slate-300 cursor-not-allowed line-through'
-                                : esSeleccionado
-                                ? 'bg-blue-600 text-white font-black shadow-sm'
-                                : 'hover:bg-blue-50 text-slate-700 cursor-pointer'
-                            }`}
-                          >
-                            {dia}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                  {odontologosFiltrados.map((od, idx) => (
+                    <option key={idx} value={od.nombre}>
+                      {od.nombre} {od.especialidad && od.especialidad !== 'Todas' ? `(${od.especialidad})` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
-
-              {fechaTextoArg && (
-                <div className="pt-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-2.5">Horarios Libres Disponibles:</label>
-                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                    {horariosDisponibles.map(h => {
-                      const estaOcupado = horariosOcupados.includes(h);
-                      return (
-                        <button
-                          key={h}
-                          type="button"
-                          disabled={estaOcupado}
-                          onClick={() => setHora(h)}
-                          className={`py-2.5 rounded-xl text-xs font-black transition-all ${
-                            estaOcupado
-                              ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-200 line-through opacity-60'
-                              : hora === h
-                              ? 'bg-blue-600 text-white shadow-md scale-105 cursor-pointer'
-                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer'
-                          }`}
-                        >
-                          {estaOcupado ? 'Ocupado' : `${h} hs`}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
 
-            <div className="flex justify-end pt-4 border-t">
+            {/* SELECTOR DE FECHA */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                📅 Fecha de Atención *
+              </label>
+              <input
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                value={fechaSeleccionada}
+                onChange={(e) => {
+                  setFechaSeleccionada(e.target.value);
+                  setHoraSeleccionada('');
+                }}
+                className="w-full sm:w-1/2 text-xs font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* GRILLA DE HORARIOS DISPONIBLES */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="block text-xs font-bold text-slate-700">
+                  ⏰ Horarios Disponibles para <span className="text-blue-600">{odontologoSeleccionado}</span>
+                </label>
+                <span className="text-[10px] font-bold text-slate-400">
+                  Gris = Ocupado
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5 pt-1">
+                {horariosDisponibles.map((hora) => {
+                  const ocupado = estaOcupado(hora);
+                  const seleccionado = horaSeleccionada === hora;
+
+                  return (
+                    <button
+                      key={hora}
+                      type="button"
+                      disabled={ocupado}
+                      onClick={() => setHoraSeleccionada(hora)}
+                      className={`py-2.5 px-3 rounded-xl text-xs font-black border transition-all ${
+                        ocupado
+                          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed line-through'
+                          : seleccionado
+                          ? 'text-white shadow-md scale-105'
+                          : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200 cursor-pointer'
+                      }`}
+                      style={
+                        seleccionado && !ocupado
+                          ? {
+                              backgroundColor: config?.colorPrimario || '#2563eb',
+                              borderColor: config?.colorPrimario || '#2563eb'
+                            }
+                          : {}
+                      }
+                    >
+                      {hora} hs
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* BOTÓN CONTINUAR AL PASO 2 */}
+            <div className="pt-4 border-t flex justify-end">
               <button
-                disabled={!fechaTextoArg || !hora}
+                type="button"
+                disabled={!horaSeleccionada || !odontologoSeleccionado}
                 onClick={() => setPaso(2)}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-30 text-white font-black text-xs py-3.5 px-8 rounded-xl shadow-md cursor-pointer"
+                className={`text-white font-black text-xs px-8 py-3.5 rounded-xl shadow-md transition-all ${
+                  !horaSeleccionada
+                    ? 'bg-slate-300 cursor-not-allowed'
+                    : 'hover:scale-105 cursor-pointer'
+                }`}
+                style={
+                  horaSeleccionada
+                    ? { backgroundColor: config?.colorPrimario || '#2563eb' }
+                    : {}
+                }
               >
                 Siguiente: Mis Datos →
               </button>
@@ -342,158 +350,147 @@ export default function SolicitarTurnoPage() {
           </div>
         )}
 
+        {/* PASO 2: DATOS PERSONALES DEL PACIENTE */}
         {paso === 2 && (
-          <form onSubmit={handleReservarPublico} className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b pb-3">
-              2. Completa tus Datos
-            </h3>
+          <form onSubmit={handleConfirmarCita} className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h2 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                2. COMPLETA TUS DATOS PERSONALES
+              </h2>
+              <button
+                type="button"
+                onClick={() => setPaso(1)}
+                className="text-xs font-bold text-blue-600 hover:underline"
+              >
+                ← Cambiar Horario / Profesional
+              </button>
+            </div>
 
-            <div className="space-y-4">
+            {/* RESUMEN DE LA SELECCIÓN */}
+            <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Nombre y Apellido *</label>
+                <span className="text-[10px] font-bold uppercase text-blue-600 block">Práctica</span>
+                <span className="font-black text-slate-900">{practicaSeleccionada}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-blue-600 block">Profesional</span>
+                <span className="font-black text-slate-900">{odontologoSeleccionado}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-blue-600 block">Fecha y Hora</span>
+                <span className="font-black text-slate-900">{fechaSeleccionada} — {horaSeleccionada} hs</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Nombre y Apellido *</label>
                 <input
                   type="text"
                   required
-                  value={nombre}
-                  onChange={e => setNombre(e.target.value)}
-                  placeholder="Ej. María García"
-                  className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500"
+                  value={nombrePaciente}
+                  onChange={(e) => setNombrePaciente(e.target.value)}
+                  placeholder="Ej. María Fernández"
+                  className="w-full font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Teléfono / WhatsApp *</label>
+                <label className="block font-bold text-slate-700 mb-1">DNI / Documento *</label>
+                <input
+                  type="text"
+                  required
+                  value={dniPaciente}
+                  onChange={(e) => setDniPaciente(e.target.value)}
+                  placeholder="Ej. 34567890"
+                  className="w-full font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Teléfono / WhatsApp *</label>
                 <input
                   type="tel"
                   required
-                  value={telefono}
-                  onChange={e => setTelefono(e.target.value)}
-                  placeholder="Ej. 03511234567"
-                  className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500 text-slate-900"
+                  value={telefonoPaciente}
+                  onChange={(e) => setTelefonoPaciente(e.target.value)}
+                  placeholder="Ej. 3511234567"
+                  className="w-full font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">DNI / Documento <span className="text-slate-400 font-normal">(Opcional)</span></label>
-                  <input
-                    type="text"
-                    value={dni}
-                    onChange={e => setDni(e.target.value)}
-                    placeholder="Ej. 30123456"
-                    className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Obra Social / Prepaga <span className="text-slate-400 font-normal">(Opcional)</span></label>
-                  <input
-                    type="text"
-                    value={obraSocial}
-                    onChange={e => setObraSocial(e.target.value)}
-                    placeholder="Ej. OSDE, Swiss Medical, Particular..."
-                    className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Correo Electrónico <span className="text-slate-400 font-normal">(Opcional)</span></label>
+                <label className="block font-bold text-slate-700 mb-1">Obra Social / Prepaga</label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="Ej. paciente@correo.com"
-                  className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500"
+                  type="text"
+                  value={obraSocial}
+                  onChange={(e) => setObraSocial(e.target.value)}
+                  placeholder="Particular / OSDE / Swiss Medical..."
+                  className="w-full font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 p-3.5 rounded-2xl flex justify-between items-center text-xs">
-              <div>
-                <span className="font-bold text-blue-950 block">Detalle de la Reserva:</span>
-                <span className="text-blue-900 font-bold">{fechaTextoArg} — {hora} hs ({motivo})</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPaso(1)}
-                className="text-blue-700 font-bold underline cursor-pointer"
-              >
-                Cambiar
-              </button>
-            </div>
-
-            <div className="flex justify-between items-center pt-4 border-t">
-              <button
-                type="button"
-                onClick={() => setPaso(1)}
-                className="text-xs font-bold text-slate-500 hover:text-slate-800"
-              >
-                ← Volver
-              </button>
-
+            <div className="pt-4 border-t flex justify-end gap-3">
               <button
                 type="submit"
                 disabled={enviando}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-3.5 px-8 rounded-xl shadow-md cursor-pointer flex items-center gap-2"
+                className="w-full sm:w-auto text-white font-black text-xs px-8 py-4 rounded-xl shadow-lg transition-all hover:scale-105 cursor-pointer"
+                style={{ backgroundColor: config?.colorPrimario || '#2563eb' }}
               >
-                {enviando ? 'Confirmando...' : 'Confirmar Turno 📅'}
+                {enviando ? 'Registrando Turno...' : '✅ Confirmar Reserva de Turno'}
               </button>
             </div>
           </form>
         )}
 
-        {paso === 3 && comprobante && (
-          <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-md text-center space-y-5">
-            <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl font-black">
-              ✓
+        {/* PASO 3: COMPROBANTE DE RESERVA EXITOSA */}
+        {paso === 3 && (
+          <div className="bg-white p-8 rounded-3xl shadow-md border border-emerald-200 text-center space-y-6">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl mx-auto">
+              ✅
             </div>
 
-            <div>
-              <h3 className="text-xl font-black text-slate-900">¡Turno Confirmado con Éxito!</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Se ha enviado una notificación automática a tu celular vía WhatsApp.
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-slate-900">¡Turno Confirmado!</h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Tu cita ya quedó agendada en el sistema de la clínica.
               </p>
             </div>
 
-            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 max-w-xs mx-auto text-left space-y-2 text-xs">
-              <div className="flex justify-between border-b pb-1.5">
-                <span className="text-slate-500 font-bold">Código Cita:</span>
-                <span className="font-black text-blue-600">{comprobante.codigo || comprobante.id}</span>
-              </div>
-              <div className="flex justify-between border-b pb-1.5">
-                <span className="text-slate-500 font-bold">Fecha / Hora:</span>
-                <span className="font-black text-slate-800">{fechaTextoArg} — {hora} hs</span>
-              </div>
-              <div className="flex justify-between border-b pb-1.5">
-                <span className="text-slate-500 font-bold">Práctica:</span>
-                <span className="font-bold text-slate-800">{motivo}</span>
-              </div>
-              <div className="flex justify-between border-b pb-1.5">
-                <span className="text-slate-500 font-bold">Paciente:</span>
-                <span className="font-bold text-slate-800">{nombre}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-bold">Contacto:</span>
-                <span className="font-bold text-slate-800">{telefono}</span>
-              </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 max-w-md mx-auto text-left space-y-2 text-xs">
+              <p><strong className="text-slate-700">Paciente:</strong> {nombrePaciente}</p>
+              <p><strong className="text-slate-700">Práctica:</strong> {practicaSeleccionada}</p>
+              <p><strong className="text-slate-700">Odontólogo:</strong> {odontologoSeleccionado}</p>
+              <p><strong className="text-slate-700">Fecha y Horario:</strong> {fechaSeleccionada} a las {horaSeleccionada} hs</p>
+              <p><strong className="text-slate-700">Cobertura:</strong> {obraSocial}</p>
             </div>
 
-            <div className="pt-2">
+            <div className="flex flex-wrap justify-center gap-3 pt-2">
               <Link
                 href="/"
-                onClick={resetFormulario}
-                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 px-6 rounded-xl inline-block"
+                className="bg-slate-800 hover:bg-slate-900 text-white font-black text-xs px-6 py-3 rounded-xl transition-colors"
               >
-                Finalizar y Volver al Inicio
+                Volver a la Portada
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setPaso(1);
+                  setHoraSeleccionada('');
+                }}
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-black text-xs px-6 py-3 rounded-xl border border-blue-200 transition-colors"
+              >
+                Reservar Otro Turno
+              </button>
             </div>
           </div>
         )}
       </main>
 
-      <footer className="bg-white py-6 border-t text-center text-xs text-slate-400">
-        {config.nombreClinica} — Canal Oficial de Solicitud de Citas
+      {/* FOOTER */}
+      <footer className="bg-white border-t py-6 text-center text-xs text-slate-400">
+        {config?.nombreClinica || 'MeDent Clínica Odontológica'} — Canal Oficial de Solicitud de Citas
       </footer>
     </div>
   );
