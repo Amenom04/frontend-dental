@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useConfig } from '../../../context/ConfigContext';
+import { useConfig } from '@/context/ConfigContext';
 
 interface DocumentoClinico {
   id: number;
@@ -164,8 +164,8 @@ function FichaPacienteContent() {
   };
 
   const manejarRuedaRaton = (e: React.WheelEvent) => {
-    const factor = e.deltaY > 0 ? 0.9 : 1.1; // Hacia abajo aleja, hacia arriba acerca
-    setEscalaZoom(prev => Math.min(Math.max(prev * factor, 0.5), 5)); // Límite de zoom entre 0.5x y 5x
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    setEscalaZoom(prev => Math.min(Math.max(prev * factor, 0.5), 5));
   };
 
   const iniciarArrastreVisor = (e: React.MouseEvent | React.TouchEvent) => {
@@ -265,7 +265,7 @@ function FichaPacienteContent() {
   if (!mounted) return null;
 
   return (
-    <div className={`min-h-screen bg-slate-100 text-slate-800 flex flex-col justify-between ${config.tipoTipografia}`}>
+    <div className={`min-h-screen bg-slate-100 text-slate-800 flex flex-col justify-between ${config?.tipoTipografia || ''}`}>
       <style jsx global>{`
         @media print {
           @page { size: A4 portrait; margin: 0.8cm; }
@@ -277,7 +277,7 @@ function FichaPacienteContent() {
       {/* HEADER SUPERIOR UNIFICADO */}
       <header className="bg-blue-600 text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 no-print">
         <div className="flex flex-col">
-          <h1 className="text-2xl font-black tracking-tight leading-none">{config.nombreClinica || 'MeDent'}</h1>
+          <h1 className="text-2xl font-black tracking-tight leading-none">{config?.nombreClinica || 'MeDent'}</h1>
           <p className="text-[10px] uppercase font-bold text-blue-100 tracking-widest mt-0.5">CLÍNICA ODONTOLÓGICA — ODONTOGRAMA Y EXPEDIENTE</p>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
@@ -354,7 +354,6 @@ function FichaPacienteContent() {
                           </div>
                         </div>
                         <div className="flex gap-1">
-                          {/* SI ES IMAGEN, ABRE EL VISOR INTERACTIVO, SI ES PDF/OTRO LO ABRE EN OTRA PESTAÑA */}
                           {doc.url !== '#' && doc.tipo.includes('image') ? (
                             <button onClick={() => abrirVisor(doc.url)} className="p-2 bg-white text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-200 text-xs font-bold shadow-sm transition-colors">👁️</button>
                           ) : (
@@ -440,7 +439,6 @@ function FichaPacienteContent() {
       {/* VISOR DE IMÁGENES A PANTALLA COMPLETA */}
       {imagenVisor && (
         <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center no-print overflow-hidden select-none">
-          {/* Controles Flotantes */}
           <div className="absolute top-6 right-6 z-[110] flex gap-3">
             <button onClick={restablecerVisor} className="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg hover:bg-slate-700 transition-colors border border-slate-600">
               🔄 Restablecer
@@ -454,7 +452,6 @@ function FichaPacienteContent() {
             Rueda del ratón para Zoom ({Math.round(escalaZoom * 100)}%) • Clic y arrastrar para mover
           </div>
 
-          {/* Área interactiva */}
           <div 
             className={`w-full h-full flex items-center justify-center transition-colors ${estaArrastrando ? 'cursor-grabbing' : 'cursor-grab'}`}
             onWheel={manejarRuedaRaton}
@@ -469,10 +466,10 @@ function FichaPacienteContent() {
             <img 
               src={imagenVisor} 
               alt="Visor Detallado" 
-              draggable={false} // Evita el comportamiento fantasma por defecto del navegador al arrastrar imágenes
+              draggable={false}
               style={{
                 transform: `translate(${posicionPaneo.x}px, ${posicionPaneo.y}px) scale(${escalaZoom})`,
-                transition: estaArrastrando ? 'none' : 'transform 0.15s ease-out', // Suaviza el zoom pero mantiene el arrastre fluido
+                transition: estaArrastrando ? 'none' : 'transform 0.15s ease-out',
                 maxHeight: '90vh',
                 maxWidth: '90vw',
                 objectFit: 'contain'
