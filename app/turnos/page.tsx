@@ -393,6 +393,14 @@ export default function AgendaInternaPage() {
     router.push(`/pacientes?buscar=${encodeURIComponent(nombrePaciente)}`);
   };
 
+  const irACobrarTurno = (t: Turno) => {
+    const params = new URLSearchParams({
+      paciente: t.paciente_nombre,
+      practica: t.motivo || t.especialidad || 'Consulta Odontológica',
+      odontologo: t.profesional || 'Od. Sofía Martínez'
+    });
+    router.push(`/finanzas?${params.toString()}`);
+  };
   const esAdmin = sesion?.rol === 'admin';
 
   const turnosFiltrados = turnos.filter(t => {
@@ -567,6 +575,17 @@ export default function AgendaInternaPage() {
                 Cancelar Cita
               </button>
             </div>
+            
+            {esAdmin && (
+              <div className="pt-1">
+                <button
+                  onClick={() => irACobrarTurno(turnoDetalle)}
+                  className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs py-2.5 px-3 rounded-xl transition-colors cursor-pointer text-center shadow-sm"
+                >
+                  💵 Cobrar Turno en Caja
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

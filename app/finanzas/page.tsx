@@ -68,13 +68,33 @@ export default function FinanzasPage() {
     const hoy = new Date().toISOString().split('T')[0];
     setFechaFiltro(hoy);
     setFechaMov(hoy);
-    setPractica(listaPracticas[0]);
-    setOdontologo(listaOdontologos[0]);
+
+    // Leer parámetros si viene desde "Cobrar Turno" en la Agenda
+    const searchParams = new URLSearchParams(window.location.search);
+    const paramPaciente = searchParams.get('paciente');
+    const paramPractica = searchParams.get('practica');
+    const paramOdontologo = searchParams.get('odontologo');
+
+    if (paramPaciente) setPaciente(paramPaciente);
+    setPractica(paramPractica || listaPracticas[0]);
+    setOdontologo(paramOdontologo || listaOdontologos[0]);
 
     const guardados = localStorage.getItem('medent_finanzas');
     if (guardados) {
       setMovimientos(JSON.parse(guardados));
     }
+
+    // Sincronizar con backend en Neon
+    fetch('https://medent-backend.onrender.com/api/finanzas', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setMovimientos(data);
+          localStorage.setItem('medent_finanzas', JSON.stringify(data));
+        }
+      })
+      .catch(() => null);
+
     setMounted(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -90,7 +110,7 @@ export default function FinanzasPage() {
       id: Date.now(),
       fecha: fechaMov,
       tipo,
-      paciente: tipo === 'Ingreso' ? (paciente.trim() || 'Paciente Particular') : 'Gasto Operativo',
+      paciente: tipo === 'Ingreso' ? paciente.trim() || 'Paciente Particular' : 'Gasto Operativo',
       practica,
       odontologo: tipo === 'Ingreso' ? odontologo : 'Clínica / Administración',
       medioPago,
@@ -103,27 +123,27 @@ export default function FinanzasPage() {
     setMovimientos(actualizados);
     localStorage.setItem('medent_finanzas', JSON.stringify(actualizados));
 
-    // Envío opcional al backend en Render
     await fetch('https://medent-backend.onrender.com/api/finanzas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(nuevo)
     }).catch(() => null);
 
-    // Limpiar campos
     setPaciente('');
     setMonto('');
     setObservaciones('');
   };
 
-  const eliminarMovimiento = (id: number) => {
+  const eliminarMovimiento = async (id: number) => {
     if (!confirm('¿Eliminar este registro de caja?')) return;
     const actualizados = movimientos.filter((m) => m.id !== id);
     setMovimientos(actualizados);
     localStorage.setItem('medent_finanzas', JSON.stringify(actualizados));
-  };
 
-  if (!mounted) return null;
+    await fetch(`https://medent-backend.onrender.com/api/finanzas/${id}`, {
+      method: 'DELETE'
+    }).catch(() => null);
+  };
 
   // Filtrado de movimientos
   const movimientosFiltrados = movimientos.filter((m) => {
@@ -131,6 +151,57 @@ export default function FinanzasPage() {
     const cumpleProf = profesionalFiltro === 'Todos' || m.odontologo === profesionalFiltro;
     return cumpleFecha && cumpleProf;
   });
+
+  const exportarCSV = () => {
+    if (movimientosFiltrados.length === 0) {
+      return alert('No hay movimientos en la vista actual para exportar.');
+    }
+
+    const encabezados = [
+      'Fecha',
+      'Tipo',
+      'Paciente',
+      'Practica',
+      'Odontologo',
+      'Medio de Pago',
+      'Monto Total',
+      '% Honorario',
+      'Honorario Odontologo',
+      'Neto Clinica',
+      'Observaciones'
+    ];
+
+    const filas = movimientosFiltrados.map((m) => {
+      const honOd = m.tipo === 'Ingreso' ? (m.monto * m.porcentajeHonorario) / 100 : 0;
+      const neto = m.tipo === 'Ingreso' ? m.monto - honOd : -m.monto;
+      return [
+        m.fecha,
+        m.tipo,
+        `"${(m.paciente || '').replace(/"/g, '""')}"`,
+        `"${(m.practica || '').replace(/"/g, '""')}"`,
+        `"${(m.odontologo || '').replace(/"/g, '""')}"`,
+        `"${m.medioPago}"`,
+        m.monto,
+        m.porcentajeHonorario,
+        honOd,
+        neto,
+        `"${(m.observaciones || '').replace(/"/g, '""')}"`
+      ].join(';');
+    });
+
+    const csvContenido = '\uFEFF' + [encabezados.join(';'), ...filas].join('\n');
+    const blob = new Blob([csvContenido], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `MeDent_Caja_${fechaFiltro || 'Historico'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  if (!mounted) return null;
 
   // Cálculos financieros
   const totalIngresos = movimientosFiltrados
@@ -147,7 +218,6 @@ export default function FinanzasPage() {
 
   const netoClinica = totalIngresos - totalEgresos - totalHonorarios;
 
-  // Resumen de honorarios agrupado por odontólogo
   const liquidacionPorProfesional = movimientosFiltrados
     .filter((m) => m.tipo === 'Ingreso')
     .reduce((acc: Record<string, { bruto: number; honorario: number; cantidad: number }>, m) => {
@@ -162,6 +232,14 @@ export default function FinanzasPage() {
 
   const formatoMoneda = (valor: number) =>
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(valor);
+
+  const opcionesPracticas = practica && !listaPracticas.includes(practica)
+    ? [practica, ...listaPracticas]
+    : listaPracticas;
+
+  const opcionesOdontologos = odontologo && !listaOdontologos.includes(odontologo)
+    ? [odontologo, ...listaOdontologos]
+    : listaOdontologos;
 
   return (
     <ProteccionRuta rolesPermitidos={['admin']}>
@@ -189,10 +267,16 @@ export default function FinanzasPage() {
               🗓️ Agenda
             </Link>
             <button
+              onClick={exportarCSV}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded-xl border border-emerald-400 cursor-pointer"
+            >
+              📥 Exportar Excel (CSV)
+            </button>
+            <button
               onClick={() => window.print()}
               className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs py-2 px-3 rounded-xl border border-indigo-400 cursor-pointer"
             >
-              🖨️ Imprimir Reporte
+              🖨️ Imprimir
             </button>
           </div>
         </header>
@@ -306,7 +390,7 @@ export default function FinanzasPage() {
                         onChange={(e) => setOdontologo(e.target.value)}
                         className="w-full font-bold border rounded-xl p-2.5 bg-purple-50 text-purple-950"
                       >
-                        {listaOdontologos.map((od, i) => (
+                        {opcionesOdontologos.map((od, i) => (
                           <option key={i} value={od}>{od}</option>
                         ))}
                       </select>
@@ -323,7 +407,7 @@ export default function FinanzasPage() {
                     onChange={(e) => setPractica(e.target.value)}
                     className="w-full font-bold border rounded-xl p-2.5 bg-slate-50"
                   >
-                    {listaPracticas.map((p, i) => (
+                    {opcionesPracticas.map((p, i) => (
                       <option key={i} value={p}>{p}</option>
                     ))}
                   </select>
