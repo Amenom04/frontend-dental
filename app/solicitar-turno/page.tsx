@@ -55,12 +55,11 @@ export default function SolicitarTurnoPage() {
           { nombre: 'Dr. Martín Pérez', especialidad: 'Cirugía Maxilofacial' }
         ];
 
-  // Estados de Selección (Paso 1)
+  // Estados de Selección (Paso 1) - Fechas inicializadas en vacío para evitar error de prerender en Next.js 16
   const [practicaSeleccionada, setPracticaSeleccionada] = useState<string>(listaPracticas[0]);
   const [odontologoSeleccionado, setOdontologoSeleccionado] = useState<string>('');
-  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [fechaMinima, setFechaMinima] = useState<string>('');
+  const [fechaSeleccionada, setFechaSeleccionada] = useState<string>('');
   const [horaSeleccionada, setHoraSeleccionada] = useState<string>('');
 
   // Estados de Datos del Paciente (Paso 2)
@@ -80,7 +79,7 @@ export default function SolicitarTurnoPage() {
     '18:30'
   ];
 
-  // Filtrar odontólogos habilitados para la práctica seleccionada (o mostrar todos si atienden todas)
+  // Filtrar odontólogos habilitados para la práctica seleccionada
   const odontologosFiltrados = listaOdontologosBase.filter((od) => {
     if (!od.especialidad || od.especialidad === 'Todas') return true;
     if (od.practicas && od.practicas.length > 0) {
@@ -90,7 +89,11 @@ export default function SolicitarTurnoPage() {
   });
 
   useEffect(() => {
+    const hoy = new Date().toISOString().split('T')[0];
+    setFechaMinima(hoy);
+    setFechaSeleccionada(hoy);
     setMounted(true);
+
     const guardados = localStorage.getItem('medent_turnos');
     if (guardados) {
       setTurnosExistentes(JSON.parse(guardados));
@@ -141,12 +144,10 @@ export default function SolicitarTurnoPage() {
     };
 
     try {
-      // Guardar en almacenamiento local sincronizado con la Agenda Interna (/turnos)
       const actualizados = [nuevoTurno, ...turnosExistentes];
       setTurnosExistentes(actualizados);
       localStorage.setItem('medent_turnos', JSON.stringify(actualizados));
 
-      // Intentar envío al Backend en Render (silencioso si aún no existe el endpoint)
       await fetch('https://medent-backend.onrender.com/api/turnos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -221,7 +222,7 @@ export default function SolicitarTurnoPage() {
               1. SELECCIONA PRÁCTICA, PROFESIONAL Y HORARIO
             </h2>
 
-            {/* SELECTOR DE PRÁCTICA / ESPECIALIDAD */}
+            {/* SELECTOR DE PRÁCTICA Y ODONTÓLOGO */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -243,7 +244,6 @@ export default function SolicitarTurnoPage() {
                 </select>
               </div>
 
-              {/* SELECTOR DE ODONTÓLOGO */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   👨‍⚕️ Profesional / Odontólogo *
@@ -272,7 +272,7 @@ export default function SolicitarTurnoPage() {
               </label>
               <input
                 type="date"
-                min={new Date().toISOString().split('T')[0]}
+                min={fechaMinima}
                 value={fechaSeleccionada}
                 onChange={(e) => {
                   setFechaSeleccionada(e.target.value);
