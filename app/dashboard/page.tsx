@@ -171,9 +171,9 @@ export default function DashboardPage() {
                 <h3 className="text-base font-black text-gray-900">Tratamientos & Odontograma</h3>
                 <p className="text-xs text-gray-500">Prácticas odontológicas y ficha dental.</p>
               </div>
-              <button onClick={() => alert('Módulo de Odontograma en desarrollo.')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-colors cursor-pointer">
+              <Link href="/pacientes" className="bg-blue-600 hover:bg-blue-700 text-white text-center font-bold text-xs py-2.5 px-4 rounded-xl transition-colors block">
                 Ingresar al Módulo →
-              </button>
+              </Link>
             </div>
 
             {/* TARJETA 4: FINANZAS (SOLO ADMINISTRADOR) */}
@@ -187,9 +187,9 @@ export default function DashboardPage() {
                   <h3 className="text-base font-black text-gray-900">Finanzas & Aranceles</h3>
                   <p className="text-xs text-gray-500">Caja, facturación, honorarios y reportes de cobros.</p>
                 </div>
-                <button onClick={() => alert('Módulo de Finanzas en desarrollo.')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-colors cursor-pointer">
+                <Link href="/finanzas" className="bg-blue-600 hover:bg-blue-700 text-white text-center font-bold text-xs py-2.5 px-4 rounded-xl transition-colors block">
                   Ingresar al Módulo →
-                </button>
+                </Link>
               </div>
             )}
 
@@ -204,9 +204,9 @@ export default function DashboardPage() {
                   <h3 className="text-base font-black text-gray-900">Recursos Humanos</h3>
                   <p className="text-xs text-gray-500">Legajos de personal, asistencias y pagos.</p>
                 </div>
-                <button onClick={() => alert('Módulo de Personal en desarrollo.')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-colors cursor-pointer">
+                <Link href="/configuracion" className="bg-blue-600 hover:bg-blue-700 text-white text-center font-bold text-xs py-2.5 px-4 rounded-xl transition-colors block">
                   Ingresar al Módulo →
-                </button>
+                </Link>
               </div>
             )}
 
@@ -236,19 +236,3 @@ export default function DashboardPage() {
     </ProteccionRuta>
   );
 }
-{/* TARJETA 4: FINANZAS (SOLO ADMINISTRADOR) */}
-            {rol === 'Administrador' && (
-              <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col justify-between space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-2xl">💰</span>
-                    <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md uppercase">HABILITADO</span>
-                  </div>
-                  <h3 className="text-base font-black text-gray-900">Finanzas & Aranceles</h3>
-                  <p className="text-xs text-gray-500">Caja, facturación, honorarios y reportes de cobros.</p>
-                </div>
-                <Link href="/finanzas" className="bg-blue-600 hover:bg-blue-700 text-white text-center font-bold text-xs py-2.5 px-4 rounded-xl transition-colors block">
-                  Ingresar al Módulo →
-                </Link>
-              </div>
-            )}
