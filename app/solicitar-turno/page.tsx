@@ -19,44 +19,30 @@ interface TurnoAgendado {
 }
 
 export default function SolicitarTurnoPage() {
-  const { config, practicas, odontologos } = useConfig() as any;
+  const { config, odontologos } = useConfig() as any;
   const [mounted, setMounted] = useState(false);
 
-  // Pasos del formulario público (1: Especialidad/Odontólogo/Horario, 2: Datos del Paciente, 3: Confirmación)
+  // Pasos del formulario público (1: Profesional/Horario, 2: Datos del Paciente, 3: Confirmación)
   const [paso, setPaso] = useState<1 | 2 | 3>(1);
 
-  // Catálogos dinámicos desde ConfigContext con respaldo por defecto
-  const listaPracticas: string[] =
-    practicas && practicas.length > 0
-      ? practicas.map((p: any) => (typeof p === 'string' ? p : p.nombre))
-      : [
-          'Odontología General / Consulta',
-          'Limpieza Dental / Profilaxis',
-          'Consulta por Ortodoncia',
-          'Cirugía Maxilofacial',
-          'Guardia / Urgencia Dental',
-          'Diagnóstico Radiológico (Pantomografía)'
-        ];
-
-  const listaOdontologosBase: { nombre: string; especialidad?: string; practicas?: string[] }[] =
+  // Catálogo dinámico de odontólogos con respaldo por defecto
+  const listaOdontologosBase: { nombre: string; especialidad: string }[] =
     odontologos && odontologos.length > 0
       ? odontologos.map((o: any) =>
           typeof o === 'string'
-            ? { nombre: o, especialidad: 'Todas' }
+            ? { nombre: o, especialidad: 'Odontología General' }
             : {
                 nombre: o.nombre || 'Od. Principal',
-                especialidad: o.especialidad || 'Todas',
-                practicas: o.practicas || []
+                especialidad: o.especialidad || 'Odontología General'
               }
         )
       : [
-          { nombre: 'Od. Principal', especialidad: 'Todas' },
+          { nombre: 'Od. Principal', especialidad: 'Odontología General' },
           { nombre: 'Dra. Laura Gómez', especialidad: 'Ortodoncia' },
           { nombre: 'Dr. Martín Pérez', especialidad: 'Cirugía Maxilofacial' }
         ];
 
-  // Estados de Selección (Paso 1) - Fechas inicializadas en vacío para evitar error de prerender en Next.js 16
-  const [practicaSeleccionada, setPracticaSeleccionada] = useState<string>(listaPracticas[0]);
+  // Estados de Selección (Paso 1)
   const [odontologoSeleccionado, setOdontologoSeleccionado] = useState<string>('');
   const [fechaMinima, setFechaMinima] = useState<string>('');
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>('');
@@ -79,36 +65,24 @@ export default function SolicitarTurnoPage() {
     '18:30'
   ];
 
-  // Filtrar odontólogos habilitados para la práctica seleccionada
-  const odontologosFiltrados = listaOdontologosBase.filter((od) => {
-    if (!od.especialidad || od.especialidad === 'Todas') return true;
-    if (od.practicas && od.practicas.length > 0) {
-      return od.practicas.includes(practicaSeleccionada);
-    }
-    return practicaSeleccionada.toLowerCase().includes(od.especialidad.toLowerCase()) || true;
-  });
-
   useEffect(() => {
     const hoy = new Date().toISOString().split('T')[0];
     setFechaMinima(hoy);
     setFechaSeleccionada(hoy);
+    
+    // Seleccionar el primer odontólogo por defecto
+    if (listaOdontologosBase.length > 0) {
+      setOdontologoSeleccionado(listaOdontologosBase[0].nombre);
+    }
+    
     setMounted(true);
 
     const guardados = localStorage.getItem('medent_turnos');
     if (guardados) {
       setTurnosExistentes(JSON.parse(guardados));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Actualizar odontólogo por defecto cuando cambia la práctica o carga la lista
-  useEffect(() => {
-    if (odontologosFiltrados.length > 0) {
-      const sigueValido = odontologosFiltrados.some((o) => o.nombre === odontologoSeleccionado);
-      if (!sigueValido) {
-        setOdontologoSeleccionado(odontologosFiltrados[0].nombre);
-      }
-    }
-  }, [practicaSeleccionada, odontologosFiltrados, odontologoSeleccionado]);
 
   // Verificar si un horario ya está reservado para ese odontólogo y fecha
   const estaOcupado = (hora: string) => {
@@ -119,6 +93,12 @@ export default function SolicitarTurnoPage() {
         t.odontologo === odontologoSeleccionado &&
         t.estado !== 'Cancelado'
     );
+  };
+
+  // Obtener especialidad del odontólogo seleccionado para guardar en el registro
+  const getEspecialidadSeleccionada = () => {
+    const od = listaOdontologosBase.find(o => o.nombre === odontologoSeleccionado);
+    return od ? od.especialidad : 'Odontología General';
   };
 
   const handleConfirmarCita = async (e: React.FormEvent) => {
@@ -138,7 +118,7 @@ export default function SolicitarTurnoPage() {
       telefono: telefonoPaciente.trim(),
       email: emailPaciente.trim(),
       obraSocial: obraSocial.trim() || 'Particular',
-      practica: practicaSeleccionada,
+      practica: getEspecialidadSeleccionada(),
       odontologo: odontologoSeleccionado,
       estado: 'Confirmado'
     };
@@ -211,42 +191,22 @@ export default function SolicitarTurnoPage() {
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Reserva tu Cita Dental</h1>
           <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Selecciona la práctica, el profesional de tu preferencia y confirma el horario de forma directa.
+            Selecciona el profesional de tu preferencia y confirma el horario de forma directa.
           </p>
         </div>
 
-        {/* PASO 1: PRÁCTICA, ODONTÓLOGO, FECHA Y HORARIO */}
+        {/* PASO 1: ODONTÓLOGO, FECHA Y HORARIO */}
         {paso === 1 && (
           <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6">
             <h2 className="text-xs font-black uppercase tracking-wider text-slate-800 border-b pb-3">
-              1. SELECCIONA PRÁCTICA, PROFESIONAL Y HORARIO
+              1. SELECCIONA PROFESIONAL Y HORARIO
             </h2>
 
-            {/* SELECTOR DE PRÁCTICA Y ODONTÓLOGO */}
+            {/* SELECTORES SIMPLIFICADOS: PROFESIONAL Y FECHA */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  🦷 Práctica / Especialidad *
-                </label>
-                <select
-                  value={practicaSeleccionada}
-                  onChange={(e) => {
-                    setPracticaSeleccionada(e.target.value);
-                    setHoraSeleccionada('');
-                  }}
-                  className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3 bg-white text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {listaPracticas.map((practica, idx) => (
-                    <option key={idx} value={practica}>
-                      {practica}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  👨‍⚕️ Profesional / Odontólogo *
+                  👨‍⚕️ Profesional / Especialidad *
                 </label>
                 <select
                   value={odontologoSeleccionado}
@@ -256,34 +216,33 @@ export default function SolicitarTurnoPage() {
                   }}
                   className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3 bg-white text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {odontologosFiltrados.map((od, idx) => (
+                  {listaOdontologosBase.map((od, idx) => (
                     <option key={idx} value={od.nombre}>
-                      {od.nombre} {od.especialidad && od.especialidad !== 'Todas' ? `(${od.especialidad})` : ''}
+                      {od.nombre} — {od.especialidad}
                     </option>
                   ))}
                 </select>
               </div>
-            </div>
 
-            {/* SELECTOR DE FECHA */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                📅 Fecha de Atención *
-              </label>
-              <input
-                type="date"
-                min={fechaMinima}
-                value={fechaSeleccionada}
-                onChange={(e) => {
-                  setFechaSeleccionada(e.target.value);
-                  setHoraSeleccionada('');
-                }}
-                className="w-full sm:w-1/2 text-xs font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  📅 Fecha de Atención *
+                </label>
+                <input
+                  type="date"
+                  min={fechaMinima}
+                  value={fechaSeleccionada}
+                  onChange={(e) => {
+                    setFechaSeleccionada(e.target.value);
+                    setHoraSeleccionada('');
+                  }}
+                  className="w-full text-xs font-bold border border-slate-300 rounded-xl p-3 bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
 
             {/* GRILLA DE HORARIOS DISPONIBLES */}
-            <div className="space-y-2">
+            <div className="space-y-2 pt-2">
               <div className="flex justify-between items-center">
                 <label className="block text-xs font-bold text-slate-700">
                   ⏰ Horarios Disponibles para <span className="text-blue-600">{odontologoSeleccionado}</span>
@@ -367,14 +326,10 @@ export default function SolicitarTurnoPage() {
             </div>
 
             {/* RESUMEN DE LA SELECCIÓN */}
-            <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="text-[10px] font-bold uppercase text-blue-600 block">Práctica</span>
-                <span className="font-black text-slate-900">{practicaSeleccionada}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase text-blue-600 block">Profesional</span>
-                <span className="font-black text-slate-900">{odontologoSeleccionado}</span>
+                <span className="text-[10px] font-bold uppercase text-blue-600 block">Profesional y Práctica</span>
+                <span className="font-black text-slate-900">{odontologoSeleccionado} ({getEspecialidadSeleccionada()})</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase text-blue-600 block">Fecha y Hora</span>
@@ -460,8 +415,7 @@ export default function SolicitarTurnoPage() {
 
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 max-w-md mx-auto text-left space-y-2 text-xs">
               <p><strong className="text-slate-700">Paciente:</strong> {nombrePaciente}</p>
-              <p><strong className="text-slate-700">Práctica:</strong> {practicaSeleccionada}</p>
-              <p><strong className="text-slate-700">Odontólogo:</strong> {odontologoSeleccionado}</p>
+              <p><strong className="text-slate-700">Profesional:</strong> {odontologoSeleccionado} ({getEspecialidadSeleccionada()})</p>
               <p><strong className="text-slate-700">Fecha y Horario:</strong> {fechaSeleccionada} a las {horaSeleccionada} hs</p>
               <p><strong className="text-slate-700">Cobertura:</strong> {obraSocial}</p>
             </div>
