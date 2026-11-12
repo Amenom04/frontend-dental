@@ -458,7 +458,7 @@ export default function AgendaInternaPage() {
               <div className="pt-1 border-t border-gray-200">
                 <span className="text-gray-400 font-bold block text-[10px] uppercase">Motivo / Práctica</span>
                 <p className="font-medium text-gray-700 italic bg-white p-2.5 rounded-xl border mt-1">
-                  "{turnoDetalle.motivo || 'Consulta General'}"
+                  &quot;{turnoDetalle.motivo || 'Consulta General'}&quot;
                 </p>
               </div>
             </div>
@@ -526,19 +526,19 @@ export default function AgendaInternaPage() {
                 <input type="tel" value={manualTelefono} onChange={(e) => setManualTelefono(e.target.value)} required placeholder="Ej. 03511234567" className="w-full text-xs border border-emerald-400 rounded-xl p-2.5 bg-white font-bold text-emerald-800" />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Odontólogo *</label>
-                  <select value={manualProf} onChange={(e) => handleCambioOdontologoManual(e.target.value)} className="w-full text-xs border rounded-xl p-2.5 font-bold bg-purple-50 text-purple-900">
-                    {odontologosLista.map(od => (
-                      <option key={od.id} value={od.nombre}>{od.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Especialidad</label>
-                  <input type="text" value={manualEsp} readOnly className="w-full text-xs border rounded-xl p-2.5 bg-gray-100 font-bold" />
-                </div>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 mb-1">Odontólogo y Especialidad *</label>
+                <select 
+                  value={manualProf} 
+                  onChange={(e) => handleCambioOdontologoManual(e.target.value)} 
+                  className="w-full text-xs border rounded-xl p-2.5 font-bold bg-purple-50 text-purple-900"
+                >
+                  {odontologosLista.map(od => (
+                    <option key={od.id} value={od.nombre}>
+                      {od.nombre} — {od.especialidad}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="bg-blue-50 p-3 rounded-2xl border border-blue-200 space-y-2">
