@@ -27,8 +27,8 @@ interface Evolucion {
   id: number;
   fecha: string;
   profesional: string;
+  hallazgos: string;
   diagnostico: string;
-  tratamiento: string;
   observaciones?: string;
 }
 
@@ -65,8 +65,8 @@ function FichaPacienteContent() {
   const [evoluciones, setEvoluciones] = useState<Evolucion[]>([]);
   const [nuevaFecha, setNuevaFecha] = useState(new Date().toISOString().split('T')[0]);
   const [nuevoProfesional, setNuevoProfesional] = useState('Od. Principal');
+  const [nuevoHallazgos, setNuevoHallazgos] = useState('');
   const [nuevoDiagnostico, setNuevoDiagnostico] = useState('');
-  const [nuevoTratamiento, setNuevoTratamiento] = useState('');
   const [nuevasObservaciones, setNuevasObservaciones] = useState('');
   const [guardandoEvolucion, setGuardandoEvolucion] = useState(false);
 
@@ -155,7 +155,7 @@ function FichaPacienteContent() {
   ========================================= */
   const handleAgregarEvolucion = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoDiagnostico.trim()) return alert('Por favor ingresa un diagnóstico o haz clic en el odontograma.');
+    if (!nuevoHallazgos.trim() && !nuevoDiagnostico.trim()) return alert('Por favor ingresa un hallazgo u observaciones.');
 
     setGuardandoEvolucion(true);
 
@@ -163,8 +163,8 @@ function FichaPacienteContent() {
       id: Date.now(),
       fecha: nuevaFecha,
       profesional: nuevoProfesional,
+      hallazgos: nuevoHallazgos,
       diagnostico: nuevoDiagnostico,
-      tratamiento: nuevoTratamiento,
       observaciones: nuevasObservaciones
     };
 
@@ -172,8 +172,8 @@ function FichaPacienteContent() {
     setEvoluciones(actualizadas);
     localStorage.setItem(`medent_evoluciones_paciente_${pacienteId}`, JSON.stringify(actualizadas));
 
+    setNuevoHallazgos('');
     setNuevoDiagnostico('');
-    setNuevoTratamiento('');
     setNuevasObservaciones('');
     setGuardandoEvolucion(false);
     alert('✅ Evolución clínica guardada exitosamente.');
@@ -266,7 +266,7 @@ function FichaPacienteContent() {
   const detenerArrastreVisor = () => setEstaArrastrando(false);
 
   /* =========================================
-     MÉTODOS: ODONTOGRAMA DE 5 CARAS CON ACUMULACIÓN
+     MÉTODOS: ODONTOGRAMA DE 5 CARAS
   ========================================= */
   const getColorCara = (clave: string) => {
     const estado = carasColoreadas[clave] || 'ninguno';
@@ -287,14 +287,18 @@ function FichaPacienteContent() {
     }));
   };
 
-  // 🔥 REGISTRO ACUMULATIVO: CADA CLIC AÑADE UN HALLAZGO SIN BORRAR LOS ANTERIORES
+  // 🔥 CLIC IZQUIERDO: MARCA LA CARA Y SÓLO AÑADE SI NO ESTÁ REPETIDA
   const handleClicIzquierdo = (pieza: number, caraClave: string) => {
     const clave = `${pieza}-${caraClave}`;
     const nombreCaraEsp = NOMBRES_CARAS_ESPANOL[caraClave] || caraClave;
+    const estadoTexto = herramientaActiva.toUpperCase();
+
+    // Evitar duplicados exactos si la misma cara y estado ya se hicieron clic
+    if (carasColoreadas[clave] === herramientaActiva) return;
+
     const nuevasCaras = { ...carasColoreadas, [clave]: herramientaActiva };
     setCarasColoreadas(nuevasCaras);
 
-    const estadoTexto = herramientaActiva.toUpperCase();
     const nuevoRegistro: RegistroOdontograma = {
       id: Date.now(), pieza, cara: nombreCaraEsp, estado: estadoTexto, fecha: new Date().toLocaleDateString('es-AR')
     };
@@ -302,15 +306,18 @@ function FichaPacienteContent() {
     setRegistrosDentales(nuevosRegistros);
     guardarOdontogramaLocal(nuevasCaras, nuevosRegistros);
 
-    // ACUMULAR HALLAZGOS EN EL CAMPO DE DIAGNÓSTICO DE LA SESIÓN
     const lineaHallazgo = `• Pieza ${pieza} (${nombreCaraEsp}): ${estadoTexto}`;
-    setNuevoDiagnostico(prev => (prev ? `${prev}\n${lineaHallazgo}` : lineaHallazgo));
+    setNuevoHallazgos(prev => (prev.includes(lineaHallazgo) ? prev : prev ? `${prev}\n${lineaHallazgo}` : lineaHallazgo));
   };
 
+  // 🧹 CLIC DERECHO: REMUEVE LA MARCA VISUAL SIN ESCRIBIR EN EL DIAGNÓSTICO
   const handleClicDerecho = (e: React.MouseEvent, pieza: number, caraClave: string) => {
     e.preventDefault();
     const clave = `${pieza}-${caraClave}`;
     const nombreCaraEsp = NOMBRES_CARAS_ESPANOL[caraClave] || caraClave;
+    
+    if (!carasColoreadas[clave]) return;
+
     const nuevasCaras = { ...carasColoreadas };
     delete nuevasCaras[clave];
     setCarasColoreadas(nuevasCaras);
@@ -318,9 +325,6 @@ function FichaPacienteContent() {
     const nuevosRegistros = registrosDentales.filter(r => !(r.pieza === pieza && r.cara === nombreCaraEsp));
     setRegistrosDentales(nuevosRegistros);
     guardarOdontogramaLocal(nuevasCaras, nuevosRegistros);
-
-    const lineaRemovida = `• Pieza ${pieza} (${nombreCaraEsp}): REMOVIDO`;
-    setNuevoDiagnostico(prev => (prev ? `${prev}\n${lineaRemovida}` : lineaRemovida));
   };
 
   const limpiarOdontograma = () => {
@@ -328,7 +332,7 @@ function FichaPacienteContent() {
       setCarasColoreadas({});
       setRegistrosDentales([]);
       guardarOdontogramaLocal({}, []);
-      setNuevoDiagnostico('');
+      setNuevoHallazgos('');
     }
   };
 
@@ -594,16 +598,16 @@ function FichaPacienteContent() {
             </div>
           )}
 
-          {/* 🔥 FORMULARIO DE EVOLUCIONES CON CAMPOS AMPLIADOS Y ACUMULATIVOS */}
+          {/* FORMULARIO DE EVOLUCIONES CON CAMPOS RENOMBRADOS */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
               <h3 className="text-xs font-black text-blue-950 uppercase tracking-wider">
                 📝 REGISTRO Y OBSERVACIONES DE EVOLUCIÓN CLÍNICA
               </h3>
-              {nuevoDiagnostico && (
+              {nuevoHallazgos && (
                 <button
                   type="button"
-                  onClick={() => setNuevoDiagnostico('')}
+                  onClick={() => setNuevoHallazgos('')}
                   className="text-[10px] text-red-600 font-bold underline cursor-pointer"
                 >
                   Limpiar Lista de Hallazgos
@@ -639,30 +643,30 @@ function FichaPacienteContent() {
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                  Diagnóstico / Hallazgos Acumulados (Odontograma) *
+                  Hallazgos Acumulados (Odontograma)
                 </label>
                 <textarea
-                  rows={4}
-                  value={nuevoDiagnostico}
-                  onChange={(e) => setNuevoDiagnostico(e.target.value)}
-                  required
-                  placeholder="Los hallazgos que vayas marcando en el odontograma se irán agregando aquí automáticamente..."
+                  rows={3}
+                  value={nuevoHallazgos}
+                  onChange={(e) => setNuevoHallazgos(e.target.value)}
+                  placeholder="Los hallazgos marcados en el odontograma irán apareciendo aquí automáticamente..."
                   className="w-full text-xs font-bold border border-blue-200 rounded-xl p-3 bg-blue-50/50 text-blue-900 outline-none"
                 />
               </div>
 
+              {/* RENOMBRADO A DIAGNÓSTICO */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Tratamiento / Procedimiento Efectuado</label>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Diagnóstico *</label>
                 <input
                   type="text"
-                  value={nuevoTratamiento}
-                  onChange={(e) => setNuevoTratamiento(e.target.value)}
-                  placeholder="Ej. Profilaxis general, reconstrucción en composite"
+                  value={nuevoDiagnostico}
+                  onChange={(e) => setNuevoDiagnostico(e.target.value)}
+                  required
+                  placeholder="Ej. Caries penetrante en pieza 16, gingivitis moderada"
                   className="w-full text-xs font-medium border rounded-xl p-2.5 bg-slate-50 outline-none"
                 />
               </div>
 
-              {/* ⚡ CAMPO DE OBSERVACIONES AGRANDADO PARA CÓMODA REDACCIÓN */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
                   Observaciones / Indicaciones Post-Atención (Espacio Ampliado)
@@ -671,7 +675,7 @@ function FichaPacienteContent() {
                   rows={6}
                   value={nuevasObservaciones}
                   onChange={(e) => setNuevasObservaciones(e.target.value)}
-                  placeholder="Escribe aquí todas las observaciones detalladas de la sesión, evoluciones o indicaciones para el paciente..."
+                  placeholder="Escribe aquí las observaciones detalladas de la sesión, procedimientos o indicaciones para el paciente..."
                   className="w-full text-xs font-medium border rounded-xl p-3 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -707,8 +711,8 @@ function FichaPacienteContent() {
                     </div>
 
                     <div className="space-y-1 text-xs">
-                      <div className="whitespace-pre-line"><strong className="text-slate-800">Diagnóstico:</strong> {ev.diagnostico}</div>
-                      {ev.tratamiento && <p><strong className="text-slate-800">Tratamiento:</strong> {ev.tratamiento}</p>}
+                      {ev.hallazgos && <div className="whitespace-pre-line text-blue-900"><strong className="text-slate-800">Hallazgos:</strong> {ev.hallazgos}</div>}
+                      {ev.diagnostico && <p><strong className="text-slate-800">Diagnóstico:</strong> {ev.diagnostico}</p>}
                       {ev.observaciones && <p className="text-slate-600 whitespace-pre-line"><strong className="text-slate-700">Obs:</strong> {ev.observaciones}</p>}
                     </div>
                   </div>
